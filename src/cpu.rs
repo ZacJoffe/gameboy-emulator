@@ -122,3 +122,54 @@ impl Registers {
         self.l = l;
     }
 }
+
+
+struct CPU {
+    registers: Registers,
+}
+
+enum Instruction {
+    ADD(ArithTarget)
+}
+
+enum ArithTarget {
+    A, B, C, D, E, H, L
+}
+
+impl CPU {
+    fn execute(&mut self, instr: Instruction) {
+        match instr {
+            Instruction::ADD(target) => {
+                match target {
+                    ArithTarget::C => {
+                        // add c to a
+                        let value = self.registers.c;
+                        let result = self.add(value);
+                        self.registers.a = result;
+                    }
+                    _ => {}
+                }
+            }
+            _ => {}
+        }
+    }
+
+    fn add(&mut self, value: u8) -> u8 {
+        let (result, did_overflow) = self.registers.a.overflowing_add(value);
+
+        // set zero flag if the result is equal to 0
+        self.registers.f.zero = result == 0;
+
+        // set subtract flag to false as this operation is an addition
+        self.registers.f.subtract = false;
+
+        // set carry flag if there was an overflow
+        self.registers.f.carry = did_overflow;
+
+        // set the half_carry flag if there was a carry to the upper nibble of a
+        self.registers.f.half_carry = (self.registers.a & 0xf) + (value & 0xf) > 0xf;
+
+        // return the result of the addition
+        result
+    }
+}
