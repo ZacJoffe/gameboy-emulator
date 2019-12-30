@@ -137,6 +137,7 @@ enum Instruction {
     ADDHL(AddHLTarget),
     SUB(ArithTarget),
     SBC(ArithTarget),
+    AND(ArithTarget)
 }
 
 enum ArithTarget {
@@ -175,6 +176,9 @@ impl CPU {
                  // do a SUB, then add the carry
                 self.sub(target);
                 self.sub_a(self.registers.f.carry as u8);
+            },
+            Instruction::AND(target) => {
+
             }
             _ => {}
         }
@@ -182,6 +186,7 @@ impl CPU {
 
     // ADD instruction
     fn add(&mut self, target: ArithTarget) {
+        /*
         match target {
             ArithTarget::HLI => {
 
@@ -225,9 +230,15 @@ impl CPU {
                 self.registers.a = result;
             }
         }
+        */
+        let value = self.get_register(target);
+        let result = self.add_a(value);
+        self.registers.a = result;
     }
 
+    // SUB instruction
     fn sub(&mut self, target:ArithTarget) {
+        /*
         match target {
             ArithTarget::HLI => {
 
@@ -270,6 +281,30 @@ impl CPU {
                 let result = self.sub_a(value);
                 self.registers.a = result;
             }
+        }
+        */
+        let value = self.get_register(target);
+        let result = self.sub_a(value);
+        self.registers.a = result;
+    }
+
+    // AND instruction
+    fn and(&mut self, target: ArithTarget) {
+
+    }
+
+    // get register value from arith target
+    fn get_register(&self, target: ArithTarget) -> u8 {
+        match target {
+            ArithTarget::HLI => { /* todo */ 0 },
+            ArithTarget::D8 => { /* todo */ 0 },
+            ArithTarget::A => { self.registers.a },
+            ArithTarget::B => { self.registers.b },
+            ArithTarget::C => { self.registers.c },
+            ArithTarget::D => { self.registers.d },
+            ArithTarget::E => { self.registers.e },
+            ArithTarget::H => { self.registers.h },
+            ArithTarget::L => { self.registers.l }
         }
     }
 
@@ -312,6 +347,7 @@ impl CPU {
         result
     }
 
+    // sub from a, set flags accordingly
     fn sub_a(&mut self, value: u8) -> u8 {
         let (result, did_underflow) = self.registers.a.overflowing_sub(value);
 
