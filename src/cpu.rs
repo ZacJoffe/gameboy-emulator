@@ -149,7 +149,8 @@ enum Instruction {
     SBC(ArithTarget),
     AND(ArithTarget),
     OR(ArithTarget),
-    XOR(ArithTarget)
+    XOR(ArithTarget),
+    CP(ArithTarget)
 }
 
 enum ArithTarget {
@@ -197,6 +198,8 @@ impl CPU {
             },
             Instruction::XOR(target) => {
                 self.xor(target);
+            },
+            Instruction::CP(target) => {
             }
             _ => {}
         }
@@ -209,106 +212,24 @@ impl CPU {
 
     // ADD instruction
     fn add(&mut self, target: ArithTarget) {
-        /*
-        match target {
-            ArithTarget::HLI => {
-
-            },
-            ArithTarget::D8 => {
-
-            },
-            ArithTarget::A => {
-                let value = self.registers.a;
-                let result = self.add_a(value);
-                self.registers.a = result;
-            },
-            ArithTarget::B => {
-                let value = self.registers.b;
-                let result = self.add_a(value);
-                self.registers.a = result;
-            },
-            ArithTarget::C => {
-                let value = self.registers.c;
-                let result = self.add_a(value);
-                self.registers.a = result;
-            },
-            ArithTarget::D => {
-                let value = self.registers.d;
-                let result = self.add_a(value);
-                self.registers.a = result;
-            },
-            ArithTarget::E => {
-                let value = self.registers.e;
-                let result = self.add_a(value);
-                self.registers.a = result;
-            },
-            ArithTarget::H => {
-                let value = self.registers.h;
-                let result = self.add_a(value);
-                self.registers.a = result;
-            },
-            ArithTarget::L => {
-                let value = self.registers.l;
-                let result = self.add_a(value);
-                self.registers.a = result;
-            }
-        }
-        */
         let value = self.get_register(target);
         let result = self.add_a(value);
         self.registers.a = result;
     }
 
     // SUB instruction
-    fn sub(&mut self, target:ArithTarget) {
-        /*
-        match target {
-            ArithTarget::HLI => {
-
-            },
-            ArithTarget::D8 => {
-
-            },
-            ArithTarget::A => {
-                let value = self.registers.a;
-                let result = self.sub_a(value);
-                self.registers.a = result;
-            },
-            ArithTarget::B => {
-                let value = self.registers.b;
-                let result = self.sub_a(value);
-                self.registers.a = result;
-            },
-            ArithTarget::C => {
-                let value = self.registers.c;
-                let result = self.sub_a(value);
-                self.registers.a = result;
-            },
-            ArithTarget::D => {
-                let value = self.registers.d;
-                let result = self.sub_a(value);
-                self.registers.a = result;
-            },
-            ArithTarget::E => {
-                let value = self.registers.e;
-                let result = self.sub_a(value);
-                self.registers.a = result;
-            },
-            ArithTarget::H => {
-                let value = self.registers.h;
-                let result = self.sub_a(value);
-                self.registers.a = result;
-            },
-            ArithTarget::L => {
-                let value = self.registers.l;
-                let result = self.sub_a(value);
-                self.registers.a = result;
-            }
-        }
-        */
+    fn sub(&mut self, target: ArithTarget) {
         let value = self.get_register(target);
         let result = self.sub_a(value);
         self.registers.a = result;
+    }
+
+    // CP instruction
+    fn cp(&mut self, target: ArithTarget) {
+        let value = self.get_register(target);
+
+        // set the flags accordingly
+        self.sub_a(value);
     }
 
     // AND instruction
