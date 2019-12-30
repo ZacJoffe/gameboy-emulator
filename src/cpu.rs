@@ -134,7 +134,9 @@ struct CPU {
 enum Instruction {
     ADD(ArithTarget),
     ADC(ArithTarget),
-    ADDHL(AddHLTarget)
+    ADDHL(AddHLTarget),
+    SUB(ArithTarget),
+    SBC(ArithTarget),
 }
 
 enum ArithTarget {
@@ -165,6 +167,14 @@ impl CPU {
                 };
                 let result = self.add_hl(value);
                 self.registers.set_hl(result);
+            },
+            Instruction::SUB(target) => {
+                self.sub(target);
+            },
+            Instruction::SBC(target) => {
+                 // do a SUB, then add the carry
+                self.sub(target);
+                self.sub_a(self.registers.f.carry as u8);
             }
             _ => {}
         }
@@ -217,6 +227,52 @@ impl CPU {
         }
     }
 
+    fn sub(&mut self, target:ArithTarget) {
+        match target {
+            ArithTarget::HLI => {
+
+            },
+            ArithTarget::D8 => {
+
+            },
+            ArithTarget::A => {
+                let value = self.registers.a;
+                let result = self.sub_a(value);
+                self.registers.a = result;
+            },
+            ArithTarget::B => {
+                let value = self.registers.b;
+                let result = self.sub_a(value);
+                self.registers.a = result;
+            },
+            ArithTarget::C => {
+                let value = self.registers.c;
+                let result = self.sub_a(value);
+                self.registers.a = result;
+            },
+            ArithTarget::D => {
+                let value = self.registers.d;
+                let result = self.sub_a(value);
+                self.registers.a = result;
+            },
+            ArithTarget::E => {
+                let value = self.registers.e;
+                let result = self.sub_a(value);
+                self.registers.a = result;
+            },
+            ArithTarget::H => {
+                let value = self.registers.h;
+                let result = self.sub_a(value);
+                self.registers.a = result;
+            },
+            ArithTarget::L => {
+                let value = self.registers.l;
+                let result = self.sub_a(value);
+                self.registers.a = result;
+            }
+        }
+    }
+
     // add to register a and set flags accordingly
     fn add_a(&mut self, value: u8) -> u8 {
         let (result, did_overflow) = self.registers.a.overflowing_add(value);
@@ -253,6 +309,25 @@ impl CPU {
         self.registers.f.half_carry = (self.registers.get_hl() & 0xfff) + (value & 0xfff) > 0xfff;
 
         // return the result of the addition
+        result
+    }
+
+    fn sub_a(&mut self, value: u8) -> u8 {
+        let (result, did_underflow) = self.registers.a.overflowing_sub(value);
+
+        // set zero flag if the result is equal to 0
+        self.registers.f.zero = result == 0;
+
+        // set subtract flag to true as this operation is a subtraction
+        self.registers.f.subtract = false;
+
+        // set carry flag if there was a borrow
+        self.registers.f.carry = did_underflow;
+
+        // set the half_carry flag if there was a borrow from bit 4
+        self.registers.f.half_carry = (self.registers.a & 0xf) < (value & 0xf);
+
+        // return the result of the subtraction
         result
     }
 }
