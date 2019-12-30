@@ -137,7 +137,9 @@ enum Instruction {
     ADDHL(AddHLTarget),
     SUB(ArithTarget),
     SBC(ArithTarget),
-    AND(ArithTarget)
+    AND(ArithTarget),
+    OR(ArithTarget),
+    XOR(ArithTarget)
 }
 
 enum ArithTarget {
@@ -179,6 +181,12 @@ impl CPU {
             },
             Instruction::AND(target) => {
                 self.and(target);
+            },
+            Instruction::OR(target) => {
+                self.or(target);
+            },
+            Instruction::XOR(target) => {
+                self.xor(target);
             }
             _ => {}
         }
@@ -304,6 +312,42 @@ impl CPU {
 
         // set half_carry flag
         self.registers.f.half_carry = true;
+    }
+
+    // OR instruction
+    fn or(&mut self, target: ArithTarget) {
+        // set a to itself ored with the value of the target register
+        self.registers.a |= self.get_register(target);
+
+        // set zero flag if the result of the and is equal to 0
+        self.registers.f.zero = self.registers.a == 0;
+
+        // set subtract flag to false as this is an and operation
+        self.registers.f.subtract = false;
+
+        // reset carry flag
+        self.registers.f.carry = false;
+
+        // reset half_carry flag
+        self.registers.f.half_carry = false;
+    }
+
+    // XOR instruction
+    fn xor(&mut self, target: ArithTarget) {
+        // set a to itself xored with the value of the target register
+        self.registers.a ^= self.get_register(target);
+
+        // set zero flag if the result of the and is equal to 0
+        self.registers.f.zero = self.registers.a == 0;
+
+        // set subtract flag to false as this is an and operation
+        self.registers.f.subtract = false;
+
+        // reset carry flag
+        self.registers.f.carry = false;
+
+        // reset half_carry flag
+        self.registers.f.half_carry = false;
     }
 
     // get register value from arith target
