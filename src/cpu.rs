@@ -123,11 +123,21 @@ impl Registers {
     }
 }
 
+struct MemoryBus {
+    memory: [u8; 0xffff]
+}
+
+impl MemoryBus {
+    fn read_byte(&self, address: u16) -> u8 {
+        self.memory[address as usize];
+    }
+}
 
 struct CPU {
     pc: u16,
     sp: u16,
     registers: Registers,
+    bus: MemoryBus
 }
 
 
@@ -190,6 +200,11 @@ impl CPU {
             }
             _ => {}
         }
+    }
+
+    // reads the next byte in memory
+    fn read_next_byte(&self) -> u8 {
+        self.bus.read_byte(self.pc + 1)
     }
 
     // ADD instruction
@@ -353,8 +368,8 @@ impl CPU {
     // get register value from arith target
     fn get_register(&self, target: ArithTarget) -> u8 {
         match target {
-            ArithTarget::HLI => { /* todo */ 0 },
-            ArithTarget::D8 => { /* todo */ 0 },
+            ArithTarget::HLI => { self.bus.read_byte(self.registers.get_hl()) },
+            ArithTarget::D8 => { self.read_next_byte() },
             ArithTarget::A => { self.registers.a },
             ArithTarget::B => { self.registers.b },
             ArithTarget::C => { self.registers.c },
