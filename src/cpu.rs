@@ -178,7 +178,7 @@ impl CPU {
                 self.sub_a(self.registers.f.carry as u8);
             },
             Instruction::AND(target) => {
-
+                self.and(target);
             }
             _ => {}
         }
@@ -290,7 +290,20 @@ impl CPU {
 
     // AND instruction
     fn and(&mut self, target: ArithTarget) {
+        // set a to itself anded with the value of the target register
+        self.registers.a &= self.get_register(target);
 
+        // set zero flag if the result of the and is equal to 0
+        self.registers.f.zero = self.registers.a == 0;
+
+        // set subtract flag to false as this is an and operation
+        self.registers.f.subtract = false;
+
+        // reset carry flag
+        self.registers.f.carry = false;
+
+        // set half_carry flag
+        self.registers.f.half_carry = true;
     }
 
     // get register value from arith target
