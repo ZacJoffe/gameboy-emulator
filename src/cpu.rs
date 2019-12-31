@@ -49,6 +49,9 @@ impl CPU {
             },
             Instruction::CP(target) => {
                 self.cp(target);
+            },
+            Instruction::INC(target) => {
+
             }
         }
     }
@@ -60,30 +63,113 @@ impl CPU {
 
     // ADD instruction
     fn add(&mut self, target: ArithTarget) {
-        let value = self.get_register(target);
+        let value = self.get_register_from_arith(target);
         let result = self.add_a(value);
         self.registers.a = result;
     }
 
     // SUB instruction
     fn sub(&mut self, target: ArithTarget) {
-        let value = self.get_register(target);
+        let value = self.get_register_from_arith(target);
         let result = self.sub_a(value);
         self.registers.a = result;
     }
 
     // CP instruction
     fn cp(&mut self, target: ArithTarget) {
-        let value = self.get_register(target);
+        let value = self.get_register_from_arith(target);
 
         // set the flags accordingly
         self.sub_a(value);
     }
 
+    fn inc(&mut self, target: IncDecTarget) {
+        match target {
+            IncDecTarget::BC => { self.registers.set_bc(self.registers.get_bc() + 1); },
+            IncDecTarget::DE => { self.registers.set_de(self.registers.get_de() + 1); },
+            IncDecTarget::HL => { self.registers.set_hl(self.registers.get_hl() + 1); },
+            IncDecTarget::SP => { self.sp += 1; },
+            IncDecTarget::A => {
+                // let (result, _) = self.registers.a.overflowing_add(1);
+                let result = self.registers.a.wrapping_add(1);
+
+                // note: carry flag not affected
+                self.registers.f.zero = result == 0;
+                self.registers.f.subtract = false;
+                self.registers.f.half_carry = (self.registers.a & 0xf) + (1 & 0xf) > 0xf;
+
+                self.registers.a = result;
+            },
+            IncDecTarget::B => {
+                let result = self.registers.b.wrapping_add(1);
+
+                self.registers.f.zero = result == 0;
+                self.registers.f.subtract = false;
+                self.registers.f.half_carry = (self.registers.b & 0xf) + (1 & 0xf) > 0xf;
+
+                self.registers.b = result;
+            },
+            IncDecTarget::C => {
+                let result = self.registers.c.wrapping_add(1);
+
+                self.registers.f.zero = result == 0;
+                self.registers.f.subtract = false;
+                self.registers.f.half_carry = (self.registers.c & 0xf) + (1 & 0xf) > 0xf;
+
+                self.registers.c = result;
+            }
+            IncDecTarget::D => {
+                let result = self.registers.d.wrapping_add(1);
+
+                self.registers.f.zero = result == 0;
+                self.registers.f.subtract = false;
+                self.registers.f.half_carry = (self.registers.d & 0xf) + (1 & 0xf) > 0xf;
+
+                self.registers.d = result;
+            },
+            IncDecTarget::E => {
+                let result = self.registers.e.wrapping_add(1);
+
+                self.registers.f.zero = result == 0;
+                self.registers.f.subtract = false;
+                self.registers.f.half_carry = (self.registers.e & 0xf) + (1 & 0xf) > 0xf;
+
+                self.registers.e = result;
+            },
+            IncDecTarget::H => {
+                let result = self.registers.h.wrapping_add(1);
+
+                self.registers.f.zero = result == 0;
+                self.registers.f.subtract = false;
+                self.registers.f.half_carry = (self.registers.h & 0xf) + (1 & 0xf) > 0xf;
+
+                self.registers.h = result;
+            },
+            IncDecTarget::L => {
+                let result = self.registers.l.wrapping_add(1);
+
+                self.registers.f.zero = result == 0;
+                self.registers.f.subtract = false;
+                self.registers.f.half_carry = (self.registers.l & 0xf) + (1 & 0xf) > 0xf;
+
+                self.registers.l = result;
+            },
+            IncDecTarget::HLI => {
+                let result = self.bus.read_byte(self.registers.get_hl()) + 1;
+
+                self.registers.f.zero = result == 0;
+                self.registers.f.subtract = false;
+                self.registers.f.half_carry = (self.bus.read_byte(self.registers.get_hl()) & 0xf) + (1 & 0xf) > 0xf;
+
+                self.bus.set_byte(self.registers.get_hl(), result);
+            }
+        }
+    }
+
     // AND instruction
     fn and(&mut self, target: ArithTarget) {
         // set a to itself anded with the value of the target register
-        self.registers.a &= self.get_register(target);
+        self.registers.a &= self.get_register_from_arith(target);
 
         // set zero flag if the result of the and is equal to 0
         self.registers.f.zero = self.registers.a == 0;
@@ -101,7 +187,7 @@ impl CPU {
     // OR instruction
     fn or(&mut self, target: ArithTarget) {
         // set a to itself ored with the value of the target register
-        self.registers.a |= self.get_register(target);
+        self.registers.a |= self.get_register_from_arith(target);
 
         // set zero flag if the result of the and is equal to 0
         self.registers.f.zero = self.registers.a == 0;
@@ -119,7 +205,7 @@ impl CPU {
     // XOR instruction
     fn xor(&mut self, target: ArithTarget) {
         // set a to itself xored with the value of the target register
-        self.registers.a ^= self.get_register(target);
+        self.registers.a ^= self.get_register_from_arith(target);
 
         // set zero flag if the result of the and is equal to 0
         self.registers.f.zero = self.registers.a == 0;
@@ -135,7 +221,7 @@ impl CPU {
     }
 
     // get register value from arith target
-    fn get_register(&self, target: ArithTarget) -> u8 {
+    fn get_register_from_arith(&self, target: ArithTarget) -> u8 {
         match target {
             ArithTarget::HLI => { self.bus.read_byte(self.registers.get_hl()) },
             ArithTarget::D8 => { self.read_next_byte() },

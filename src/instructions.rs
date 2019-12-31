@@ -7,7 +7,8 @@ pub enum Instruction {
     AND(ArithTarget),
     OR(ArithTarget),
     XOR(ArithTarget),
-    CP(ArithTarget)
+    CP(ArithTarget),
+    INC(IncDecTarget)
 }
 
 pub enum ArithTarget {
@@ -17,3 +18,8 @@ pub enum ArithTarget {
 pub enum AddHLTarget {
     BC, DE, HL, SP
 }
+
+pub enum IncDecTarget {
+    A, B, C, D, E, H, L, HLI, BC, DE, HL, SP
+}
+
