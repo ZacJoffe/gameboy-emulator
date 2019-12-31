@@ -9,7 +9,15 @@ pub enum Instruction {
     XOR(ArithTarget),
     CP(ArithTarget),
     INC(IncDecTarget),
-    DEC(IncDecTarget)
+    DEC(IncDecTarget),
+
+    CCF,
+    SCF,
+
+    RRA,
+    RLA,
+    RRCA,
+    RLCA,
 }
 
 pub enum ArithTarget {

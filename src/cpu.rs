@@ -55,6 +55,86 @@ impl CPU {
             },
             Instruction::DEC(target) => {
                 self.dec(target);
+            },
+            Instruction::CCF => {
+                // CCF instruction
+                // reset subtract and half_carry flags
+                self.registers.f.subtract = false;
+                self.registers.f.half_carry = false;
+
+                // toggle carry flag
+                self.registers.f.carry = if self.registers.f.carry { false } else { true };
+            },
+            Instruction::SCF => {
+                // SCF instruction
+                // reset subtract and half_carry flags
+                self.registers.f.subtract = false;
+                self.registers.f.half_carry = false;
+
+                // set carry flag
+                self.registers.f.carry = true;
+            },
+            Instruction::RRA => {
+                // get LSB of register a
+                let new_carry = self.registers.a & 0x1;
+
+                // rotate right through carry
+                self.registers.a >>= 1;
+                self.registers.a |= if self.registers.f.carry { 0x1 << 7 } else { 0x0 };
+
+                // set carry flag to the LSB of register a before rotate
+                self.registers.f.carry = new_carry != 0;
+
+                // reset other flags
+                self.registers.f.zero = false;
+                self.registers.f.subtract = false;
+                self.registers.f.half_carry = false;
+            },
+            Instruction::RLA => {
+                // get MSB of register a
+                let new_carry = (self.registers.a & 0x80) >> 7;
+
+                // rotate left through carry
+                self.registers.a <<= 1;
+                self.registers.a |= if self.registers.f.carry { 0x1 } else { 0x0 };
+
+                // set carry flag to the MSB of register a before rotate
+                self.registers.f.carry = new_carry != 0;
+
+                // reset other flags
+                self.registers.f.zero = false;
+                self.registers.f.subtract = false;
+                self.registers.f.half_carry = false;
+            },
+            Instruction::RRCA => {
+                // get LSB of register a
+                let new_carry = self.registers.a & 0x1;
+
+                // rotate right
+                self.registers.a = self.registers.a.rotate_right(1);
+
+                // set carry flag to the LSB of register a before rotate
+                self.registers.f.carry = new_carry != 0;
+
+                // reset other flags
+                self.registers.f.zero = false;
+                self.registers.f.subtract = false;
+                self.registers.f.half_carry = false;
+            },
+            Instruction::RLCA => {
+                // get MSB of register a
+                let new_carry = (self.registers.a & 0x80) >> 7;
+
+                // rotate left
+                self.registers.a = self.registers.a.rotate_left(1);
+
+                // set carry flag to the MSB of register a before rotate
+                self.registers.f.carry = new_carry != 0;
+
+                // reset other flags
+                self.registers.f.zero = false;
+                self.registers.f.subtract = false;
+                self.registers.f.half_carry = false;
             }
         }
     }
