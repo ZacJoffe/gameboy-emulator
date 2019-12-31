@@ -34,7 +34,7 @@ impl CPU {
                 self.sub(target);
             },
             Instruction::SBC(target) => {
-                 // do a SUB, then add the carry
+                // do a SUB, then add the carry
                 self.sub(target);
                 self.sub_a(self.registers.f.carry as u8);
             },
@@ -51,7 +51,10 @@ impl CPU {
                 self.cp(target);
             },
             Instruction::INC(target) => {
-
+                self.inc(target);
+            },
+            Instruction::DEC(target) => {
+                self.dec(target);
             }
         }
     }
@@ -83,6 +86,7 @@ impl CPU {
         self.sub_a(value);
     }
 
+    // INC instruction
     fn inc(&mut self, target: IncDecTarget) {
         match target {
             IncDecTarget::BC => { self.registers.set_bc(self.registers.get_bc() + 1); },
@@ -117,7 +121,7 @@ impl CPU {
                 self.registers.f.half_carry = (self.registers.c & 0xf) + (1 & 0xf) > 0xf;
 
                 self.registers.c = result;
-            }
+            },
             IncDecTarget::D => {
                 let result = self.registers.d.wrapping_add(1);
 
@@ -155,11 +159,99 @@ impl CPU {
                 self.registers.l = result;
             },
             IncDecTarget::HLI => {
-                let result = self.bus.read_byte(self.registers.get_hl()) + 1;
+                // let result = self.bus.read_byte(self.registers.get_hl()) + 1;
+                let result = self.bus.read_byte(self.registers.get_hl()).wrapping_add(1);
 
                 self.registers.f.zero = result == 0;
                 self.registers.f.subtract = false;
                 self.registers.f.half_carry = (self.bus.read_byte(self.registers.get_hl()) & 0xf) + (1 & 0xf) > 0xf;
+
+                self.bus.set_byte(self.registers.get_hl(), result);
+            }
+        }
+    }
+
+    // DEC instruction
+    fn dec(&mut self, target: IncDecTarget) {
+        match target {
+            IncDecTarget::BC => { self.registers.set_bc(self.registers.get_bc() - 1); },
+            IncDecTarget::DE => { self.registers.set_de(self.registers.get_de() - 1); },
+            IncDecTarget::HL => { self.registers.set_hl(self.registers.get_hl() - 1); },
+            IncDecTarget::SP => { self.sp -= 1; },
+            IncDecTarget::A => {
+                let result = self.registers.a.wrapping_sub(1);
+
+                // note: carry flag not affected
+                self.registers.f.zero = result == 0;
+                self.registers.f.subtract = true;
+                self.registers.f.half_carry = (self.registers.a & 0xf) < (1 & 0xf);
+
+                self.registers.a = result;
+            },
+            IncDecTarget::B => {
+                let result = self.registers.b.wrapping_sub(1);
+
+                self.registers.f.zero = result == 0;
+                self.registers.f.subtract = true;
+                self.registers.f.half_carry = (self.registers.b & 0xf) < (1 & 0xf);
+
+                self.registers.b = result;
+            },
+            IncDecTarget::C => {
+                let result = self.registers.c.wrapping_sub(1);
+
+                self.registers.f.zero = result == 0;
+                self.registers.f.subtract = true;
+                self.registers.f.half_carry = (self.registers.c & 0xf) < (1 & 0xf);
+
+                self.registers.c = result;
+            },
+            IncDecTarget::D => {
+                let result = self.registers.d.wrapping_sub(1);
+
+                self.registers.f.zero = result == 0;
+                self.registers.f.subtract = true;
+                self.registers.f.half_carry = (self.registers.d & 0xf) < (1 & 0xf);
+
+                self.registers.d = result;
+            },
+            IncDecTarget::E => {
+                let result = self.registers.e.wrapping_sub(1);
+
+                // note: carry flag not affected
+                self.registers.f.zero = result == 0;
+                self.registers.f.subtract = true;
+                self.registers.f.half_carry = (self.registers.e & 0xf) < (1 & 0xf);
+
+                self.registers.e = result;
+            },
+            IncDecTarget::H => {
+                let result = self.registers.h.wrapping_sub(1);
+
+                // note: carry flag not affected
+                self.registers.f.zero = result == 0;
+                self.registers.f.subtract = true;
+                self.registers.f.half_carry = (self.registers.h & 0xf) < (1 & 0xf);
+
+                self.registers.h = result;
+            },
+            IncDecTarget::L => {
+                let result = self.registers.l.wrapping_sub(1);
+
+                // note: carry flag not affected
+                self.registers.f.zero = result == 0;
+                self.registers.f.subtract = true;
+                self.registers.f.half_carry = (self.registers.l & 0xf) < (1 & 0xf);
+
+                self.registers.l = result;
+            },
+            IncDecTarget::HLI => {
+                let result = self.bus.read_byte(self.registers.get_hl()).wrapping_sub(1);
+
+                // note: carry flag not affected
+                self.registers.f.zero = result == 0;
+                self.registers.f.subtract = true;
+                self.registers.f.half_carry = (self.bus.read_byte(self.registers.get_hl()) & 0xf) < (1 & 0xf);
 
                 self.bus.set_byte(self.registers.get_hl(), result);
             }
@@ -282,7 +374,7 @@ impl CPU {
         self.registers.f.zero = result == 0;
 
         // set subtract flag to true as this operation is a subtraction
-        self.registers.f.subtract = false;
+        self.registers.f.subtract = true;
 
         // set carry flag if there was a borrow
         self.registers.f.carry = did_underflow;

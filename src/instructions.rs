@@ -8,7 +8,8 @@ pub enum Instruction {
     OR(ArithTarget),
     XOR(ArithTarget),
     CP(ArithTarget),
-    INC(IncDecTarget)
+    INC(IncDecTarget),
+    DEC(IncDecTarget)
 }
 
 pub enum ArithTarget {
