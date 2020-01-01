@@ -156,6 +156,103 @@ impl CPU {
                 self.registers.f.zero = bit == 0;
                 self.registers.f.subtract = false;
                 self.registers.f.half_carry = true;
+            },
+            Instruction::SET(pos, target) => {
+                // shift 0x1 to the required bit position for the or operation
+                let bit_set = 0x1 << u8::from(pos);
+
+                match target {
+                    PrefixTarget::A => { self.registers.a |= bit_set },
+                    PrefixTarget::B => { self.registers.b |= bit_set },
+                    PrefixTarget::C => { self.registers.c |= bit_set },
+                    PrefixTarget::D => { self.registers.d |= bit_set },
+                    PrefixTarget::E => { self.registers.e |= bit_set },
+                    PrefixTarget::H => { self.registers.h |= bit_set },
+                    PrefixTarget::L => { self.registers.l |= bit_set },
+                    PrefixTarget::HLI => { self.bus.set_byte(self.registers.get_hl(), self.bus.read_byte(self.registers.get_hl()) | bit_set) }
+                }
+            },
+            Instruction::RES(pos, target) => {
+                // rotate 0xfe
+                let base: u8 = 0b1111_1110;
+                let bit_mask = base.rotate_left(u8::from(pos) as u32);
+
+                match target {
+                    PrefixTarget::A => { self.registers.a &= bit_mask },
+                    PrefixTarget::B => { self.registers.b &= bit_mask },
+                    PrefixTarget::C => { self.registers.c &= bit_mask },
+                    PrefixTarget::D => { self.registers.d &= bit_mask },
+                    PrefixTarget::E => { self.registers.e &= bit_mask },
+                    PrefixTarget::H => { self.registers.h &= bit_mask },
+                    PrefixTarget::L => { self.registers.l &= bit_mask },
+                    PrefixTarget::HLI => { self.bus.set_byte(self.registers.get_hl(), self.bus.read_byte(self.registers.get_hl()) & bit_mask) }
+                }
+            },
+            Instruction::SRL(target) => {
+                let value = self.get_register_from_prefix(target);
+
+                // put LSB of register before shift into carry flag
+                self.registers.f.carry = (value & 0x1) != 0;
+
+                // shift right
+                let result = value >> 1;
+
+                // set flags accordingly
+                self.registers.f.zero = result == 0;
+                self.registers.f.zero = false;
+                self.registers.f.half_carry = false;
+
+                /*
+                match target {
+                    PrefixTarget::A => { self.registers.a = value; },
+                    PrefixTarget::B => { self.registers.b = value; },
+                    PrefixTarget::C => { self.registers.c = value; },
+                    PrefixTarget::D => { self.registers.d = value; },
+                    PrefixTarget::E => { self.registers.e = value; },
+                    PrefixTarget::H => { self.registers.h = value; },
+                    PrefixTarget::L => { self.registers.l = value; },
+                    PrefixTarget::HLI => { self.bus.set_byte(self.registers.get_hl(), value); }
+                }
+                */
+                self.set_register_from_prefix(target, value);
+            },
+            Instruction::RR(target) => {
+                let value = self.get_register_from_prefix(target);
+
+                // get LSB of target
+                let new_carry = value & 0x1;
+
+                // shift value right and set the MSB to the value of the carry flag
+                let result = (value >> 1) | if self.registers.f.carry { 0x1 << 7 } else { 0x0 };
+
+                // set flags accordingly
+                self.registers.f.zero = result == 0;
+                self.registers.f.carry = new_carry != 0;
+
+                // reset flags
+                self.registers.f.subtract = false;
+                self.registers.f.half_carry = false;
+
+                self.set_register_from_prefix(target, value);
+            },
+            Instruction::RL(target) => {
+                let value = self.get_register_from_prefix(target);
+
+                // get MSB of target
+                let new_carry = (value & 0x80) >> 7;
+
+                // shift value left and set the LSB to the value of the carry flag
+                let result = (value << 1) | if self.registers.f.carry { 0x1 } else { 0x0 };
+
+                // set flags accordingly
+                self.registers.f.zero = result == 0;
+                self.registers.f.carry = new_carry != 0;
+
+                // reset flags
+                self.registers.f.subtract = false;
+                self.registers.f.half_carry = false;
+
+                self.set_register_from_prefix(target, value);
             }
         }
     }
@@ -439,6 +536,19 @@ impl CPU {
             PrefixTarget::H => { self.registers.h },
             PrefixTarget::L => { self.registers.l },
             PrefixTarget::HLI => { self.bus.read_byte(self.registers.get_hl()) }
+        }
+    }
+
+    fn set_register_from_prefix(&mut self, target: PrefixTarget, value: u8) {
+        match target {
+            PrefixTarget::A => { self.registers.a = value; },
+            PrefixTarget::B => { self.registers.b = value; },
+            PrefixTarget::C => { self.registers.c = value; },
+            PrefixTarget::D => { self.registers.d = value; },
+            PrefixTarget::E => { self.registers.e = value; },
+            PrefixTarget::H => { self.registers.h = value; },
+            PrefixTarget::L => { self.registers.l = value; },
+            PrefixTarget::HLI => { self.bus.set_byte(self.registers.get_hl(), value); }
         }
     }
 

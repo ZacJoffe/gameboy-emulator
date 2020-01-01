@@ -23,7 +23,12 @@ pub enum Instruction {
 
     CPL,
 
-    BIT(BitPosition, PrefixTarget)
+    BIT(BitPosition, PrefixTarget),
+    SET(BitPosition, PrefixTarget),
+    RES(BitPosition, PrefixTarget),
+    SRL(PrefixTarget),
+    RR(PrefixTarget),
+    RL(PrefixTarget)
 }
 
 pub enum ArithTarget {
@@ -38,6 +43,7 @@ pub enum IncDecTarget {
     A, B, C, D, E, H, L, HLI, BC, DE, HL, SP
 }
 
+#[derive(Copy, Clone)]
 pub enum PrefixTarget {
     A, B, C, D, E, H, L, HLI
 }
