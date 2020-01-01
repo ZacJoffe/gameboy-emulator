@@ -135,6 +135,27 @@ impl CPU {
                 self.registers.f.zero = false;
                 self.registers.f.subtract = false;
                 self.registers.f.half_carry = false;
+            },
+            Instruction::CPL => {
+                // flip all bits of data in register a
+                self.registers.a = !self.registers.a;
+
+                // set subtract and half_carry flags, don't touch the others
+                self.registers.f.subtract = true;
+                self.registers.f.half_carry = true;
+            },
+            Instruction::BIT(pos, target) => {
+                // get shift value in variable so we don't move twice
+                let shift_value = u8::from(pos);
+
+                // mask it with 1 shifted left to the correct position,
+                // and shift it back to get the value of that bit
+                let bit = (self.get_register_from_prefix(target) & (0x1 << shift_value)) >> shift_value;
+
+                // set zero if flag if the bit is 0
+                self.registers.f.zero = bit == 0;
+                self.registers.f.subtract = false;
+                self.registers.f.half_carry = true;
             }
         }
     }
@@ -395,8 +416,6 @@ impl CPU {
     // get register value from arith target
     fn get_register_from_arith(&self, target: ArithTarget) -> u8 {
         match target {
-            ArithTarget::HLI => { self.bus.read_byte(self.registers.get_hl()) },
-            ArithTarget::D8 => { self.read_next_byte() },
             ArithTarget::A => { self.registers.a },
             ArithTarget::B => { self.registers.b },
             ArithTarget::C => { self.registers.c },
@@ -404,6 +423,22 @@ impl CPU {
             ArithTarget::E => { self.registers.e },
             ArithTarget::H => { self.registers.h },
             ArithTarget::L => { self.registers.l }
+            ArithTarget::D8 => { self.read_next_byte() },
+            ArithTarget::HLI => { self.bus.read_byte(self.registers.get_hl()) },
+        }
+    }
+
+    // get register value from prefix target
+    fn get_register_from_prefix(&self, target: PrefixTarget) -> u8 {
+        match target {
+            PrefixTarget::A => { self.registers.a },
+            PrefixTarget::B => { self.registers.b },
+            PrefixTarget::C => { self.registers.c },
+            PrefixTarget::D => { self.registers.d },
+            PrefixTarget::E => { self.registers.e },
+            PrefixTarget::H => { self.registers.h },
+            PrefixTarget::L => { self.registers.l },
+            PrefixTarget::HLI => { self.bus.read_byte(self.registers.get_hl()) }
         }
     }
 
