@@ -189,6 +189,11 @@ impl CPU {
                 }
             },
             Instruction::SRL(target) => {
+                // note that this opcode does a logical shift right,
+                // meaning that the MSB is discarded in the shift
+                //
+                // by default, rust will do a logical shift with u8,
+                // so we do not need to do anything special
                 let value = self.get_register_from_prefix(target);
 
                 // put LSB of register before shift into carry flag
@@ -199,7 +204,7 @@ impl CPU {
 
                 // set flags accordingly
                 self.registers.f.zero = result == 0;
-                self.registers.f.zero = false;
+                self.registers.f.subtract = false;
                 self.registers.f.half_carry = false;
 
                 /*
@@ -241,10 +246,10 @@ impl CPU {
                 // get MSB of target
                 let new_carry = (value & 0x80) >> 7;
 
-                // shift value left and set the LSB to the value of the carry flag
+                // shift value right and set the MSB to the value of the carry flag
                 let result = (value << 1) | if self.registers.f.carry { 0x1 } else { 0x0 };
 
-                // set flags accordingly
+                // set flags
                 self.registers.f.zero = result == 0;
                 self.registers.f.carry = new_carry != 0;
 
@@ -253,6 +258,108 @@ impl CPU {
                 self.registers.f.half_carry = false;
 
                 self.set_register_from_prefix(target, value);
+            },
+            Instruction::RRC(target) => {
+                let value = self.get_register_from_prefix(target);
+
+                // get LSB of target
+                let new_carry = value & 0x1;
+
+                // rotate the value right
+                let result = value.rotate_right(1);
+
+                // set flags
+                self.registers.f.zero = result == 0;
+                self.registers.f.carry = new_carry != 0;
+
+                // reset flags
+                self.registers.f.subtract = false;
+                self.registers.f.half_carry = false;
+
+                // set the flag to the new value
+                self.set_register_from_prefix(target, result);
+            },
+            Instruction::RLC(target) => {
+                let value = self.get_register_from_prefix(target);
+
+                // get MSB of target
+                let new_carry = (value & 0x80) >> 7;
+
+                // rotate the value left
+                let result = value.rotate_left(1);
+
+                // set flags
+                self.registers.f.zero = result == 0;
+                self.registers.f.carry = new_carry != 0;
+
+                // reset flags
+                self.registers.f.subtract = false;
+                self.registers.f.half_carry = false;
+
+                // set to value rotated right
+                self.set_register_from_prefix(target, result);
+            },
+            Instruction::SRA(target) => {
+                // note this instruction needs to do an arithmetic shift
+                // thus, we need to preserve the MSB
+                //
+                // in rust, shifting a u8 is automatically logical
+                let value = self.get_register_from_prefix(target);
+
+                // put LSB of register before shift into carry flag
+                self.registers.f.carry = (value & 0x1) != 0;
+
+                // get the MSB of value
+                let msb = (value & 0x80) >> 7;
+
+                // if the MSB is 1, then shift right and or it with 0x80 to set the new MSB
+                // otherwise, just shift right and introduce the 0 normally
+                let result = if msb != 0 {
+                    (value >> 1) | 0x80
+                } else {
+                    value >> 1
+                };
+
+                // set flags accordingly
+                self.registers.f.zero = result == 0;
+                self.registers.f.subtract = false;
+                self.registers.f.half_carry = false;
+
+                self.set_register_from_prefix(target, result);
+            },
+            Instruction::SLA(target) => {
+                let value = self.get_register_from_prefix(target);
+
+                // put MSB of register before shift into carry flag
+                self.registers.f.carry = (value & 0x80) >> 7 != 0;
+
+                // shift left
+                let result = value << 1;
+
+                // set flags accordingly
+                self.registers.f.zero = result == 0;
+                self.registers.f.subtract = false;
+                self.registers.f.half_carry = false;
+
+                self.set_register_from_prefix(target, result);
+            },
+            Instruction::SWAP(target) => {
+                let value = self.get_register_from_prefix(target);
+
+                // get upper and lower nibbles of the value
+                let upper = (value & 0xf0) >> 4;
+                let lower = (value & 0xf);
+
+                // combine the lower and upper nibbles to perform the swap
+                let result = (lower << 4) | upper;
+
+                // set registers accordingly
+                self.registers.f.zero = result == 0;
+                self.registers.f.subtract = false;
+                self.registers.f.carry = false;
+                self.registers.f.half_carry = false;
+
+                self.set_register_from_prefix(target, result);
             }
         }
     }

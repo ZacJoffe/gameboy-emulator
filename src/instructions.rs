@@ -28,7 +28,12 @@ pub enum Instruction {
     RES(BitPosition, PrefixTarget),
     SRL(PrefixTarget),
     RR(PrefixTarget),
-    RL(PrefixTarget)
+    RL(PrefixTarget),
+    RRC(PrefixTarget),
+    RLC(PrefixTarget),
+    SRA(PrefixTarget),
+    SLA(PrefixTarget),
+    SWAP(PrefixTarget)
 }
 
 pub enum ArithTarget {
