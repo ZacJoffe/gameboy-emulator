@@ -16,6 +16,29 @@ impl Flags {
             carry: false
         }
     }
+
+    // set all the flags at once
+    pub fn set(&mut self, zero: Option<bool>, subtract: Option<bool>, half_carry: Option<bool>, carry: Option<bool>) {
+        match zero {
+            Some(z) => self.zero = z,
+            None => {}
+        }
+
+        match subtract {
+            Some(s) => self.subtract = s,
+            None => {}
+        }
+
+        match half_carry {
+            Some(h) => self.half_carry = h,
+            None => {}
+        }
+
+        match carry {
+            Some(c) => self.carry = c,
+            None => {}
+        }
+    }
 }
 
 impl From<&Flags> for u8 {

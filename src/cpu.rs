@@ -57,22 +57,28 @@ impl CPU {
                 self.dec(target);
             },
             Instruction::CCF => {
-                // CCF instruction
+                /*
                 // reset subtract and half_carry flags
                 self.registers.f.subtract = false;
                 self.registers.f.half_carry = false;
 
                 // toggle carry flag
                 self.registers.f.carry = if self.registers.f.carry { false } else { true };
+                */
+
+                self.registers.f.set(None, Some(false), Some(false), Some(!self.registers.f.carry));
             },
             Instruction::SCF => {
-                // SCF instruction
+                /*
                 // reset subtract and half_carry flags
                 self.registers.f.subtract = false;
                 self.registers.f.half_carry = false;
 
                 // set carry flag
                 self.registers.f.carry = true;
+                */
+
+                self.registers.f.set(None, Some(false), Some(false), Some(true));
             },
             Instruction::RRA => {
                 // get LSB of register a
@@ -82,6 +88,7 @@ impl CPU {
                 self.registers.a >>= 1;
                 self.registers.a |= if self.registers.f.carry { 0x1 << 7 } else { 0x0 };
 
+                /*
                 // set carry flag to the LSB of register a before rotate
                 self.registers.f.carry = new_carry != 0;
 
@@ -89,6 +96,8 @@ impl CPU {
                 self.registers.f.zero = false;
                 self.registers.f.subtract = false;
                 self.registers.f.half_carry = false;
+                */
+                self.registers.f.set(Some(new_carry != 0), Some(false), Some(false), Some(false));
             },
             Instruction::RLA => {
                 // get MSB of register a
@@ -98,6 +107,7 @@ impl CPU {
                 self.registers.a <<= 1;
                 self.registers.a |= if self.registers.f.carry { 0x1 } else { 0x0 };
 
+                /*
                 // set carry flag to the MSB of register a before rotate
                 self.registers.f.carry = new_carry != 0;
 
@@ -105,6 +115,9 @@ impl CPU {
                 self.registers.f.zero = false;
                 self.registers.f.subtract = false;
                 self.registers.f.half_carry = false;
+                */
+
+                self.registers.f.set(Some(new_carry != 0), Some(false), Some(false), Some(false));
             },
             Instruction::RRCA => {
                 // get LSB of register a
@@ -113,6 +126,7 @@ impl CPU {
                 // rotate right
                 self.registers.a = self.registers.a.rotate_right(1);
 
+                /*
                 // set carry flag to the LSB of register a before rotate
                 self.registers.f.carry = new_carry != 0;
 
@@ -120,6 +134,9 @@ impl CPU {
                 self.registers.f.zero = false;
                 self.registers.f.subtract = false;
                 self.registers.f.half_carry = false;
+                */
+
+                self.registers.f.set(Some(new_carry != 0), Some(false), Some(false), Some(false));
             },
             Instruction::RLCA => {
                 // get MSB of register a
@@ -128,6 +145,7 @@ impl CPU {
                 // rotate left
                 self.registers.a = self.registers.a.rotate_left(1);
 
+                /*
                 // set carry flag to the MSB of register a before rotate
                 self.registers.f.carry = new_carry != 0;
 
@@ -135,14 +153,21 @@ impl CPU {
                 self.registers.f.zero = false;
                 self.registers.f.subtract = false;
                 self.registers.f.half_carry = false;
+                */
+
+                self.registers.f.set(Some(new_carry != 0), Some(false), Some(false), Some(false));
             },
             Instruction::CPL => {
                 // flip all bits of data in register a
                 self.registers.a = !self.registers.a;
 
+                /*
                 // set subtract and half_carry flags, don't touch the others
                 self.registers.f.subtract = true;
                 self.registers.f.half_carry = true;
+                */
+
+                self.registers.f.set(None, Some(true), Some(true), None);
             },
             Instruction::BIT(pos, target) => {
                 // get shift value in variable so we don't move twice
@@ -152,10 +177,14 @@ impl CPU {
                 // and shift it back to get the value of that bit
                 let bit = (self.get_register_from_prefix(target) & (0x1 << shift_value)) >> shift_value;
 
+                /*
                 // set zero if flag if the bit is 0
                 self.registers.f.zero = bit == 0;
                 self.registers.f.subtract = false;
                 self.registers.f.half_carry = true;
+                */
+
+                self.registers.f.set(Some(bit == 0), Some(false), Some(true), None);
             },
             Instruction::SET(pos, target) => {
                 // shift 0x1 to the required bit position for the or operation
@@ -196,29 +225,21 @@ impl CPU {
                 // so we do not need to do anything special
                 let value = self.get_register_from_prefix(target);
 
-                // put LSB of register before shift into carry flag
-                self.registers.f.carry = (value & 0x1) != 0;
-
                 // shift right
                 let result = value >> 1;
+
+                /*
+                // put LSB of register before shift into carry flag
+                self.registers.f.carry = (value & 0x1) != 0;
 
                 // set flags accordingly
                 self.registers.f.zero = result == 0;
                 self.registers.f.subtract = false;
                 self.registers.f.half_carry = false;
-
-                /*
-                match target {
-                    PrefixTarget::A => { self.registers.a = value; },
-                    PrefixTarget::B => { self.registers.b = value; },
-                    PrefixTarget::C => { self.registers.c = value; },
-                    PrefixTarget::D => { self.registers.d = value; },
-                    PrefixTarget::E => { self.registers.e = value; },
-                    PrefixTarget::H => { self.registers.h = value; },
-                    PrefixTarget::L => { self.registers.l = value; },
-                    PrefixTarget::HLI => { self.bus.set_byte(self.registers.get_hl(), value); }
-                }
                 */
+
+                self.registers.f.set(Some(result == 0), Some(false), Some(false), Some((value & 0x1) != 0));
+
                 self.set_register_from_prefix(target, value);
             },
             Instruction::RR(target) => {
@@ -230,6 +251,7 @@ impl CPU {
                 // shift value right and set the MSB to the value of the carry flag
                 let result = (value >> 1) | if self.registers.f.carry { 0x1 << 7 } else { 0x0 };
 
+                /*
                 // set flags accordingly
                 self.registers.f.zero = result == 0;
                 self.registers.f.carry = new_carry != 0;
@@ -237,6 +259,9 @@ impl CPU {
                 // reset flags
                 self.registers.f.subtract = false;
                 self.registers.f.half_carry = false;
+                */
+
+                self.registers.f.set(Some(result == 0), Some(false), Some(false), Some(new_carry != 0));
 
                 self.set_register_from_prefix(target, value);
             },
@@ -249,6 +274,7 @@ impl CPU {
                 // shift value right and set the MSB to the value of the carry flag
                 let result = (value << 1) | if self.registers.f.carry { 0x1 } else { 0x0 };
 
+                /*
                 // set flags
                 self.registers.f.zero = result == 0;
                 self.registers.f.carry = new_carry != 0;
@@ -256,6 +282,9 @@ impl CPU {
                 // reset flags
                 self.registers.f.subtract = false;
                 self.registers.f.half_carry = false;
+                */
+
+                self.registers.f.set(Some(result == 0), Some(false), Some(false), Some(new_carry != 0));
 
                 self.set_register_from_prefix(target, value);
             },
@@ -268,6 +297,7 @@ impl CPU {
                 // rotate the value right
                 let result = value.rotate_right(1);
 
+                /*
                 // set flags
                 self.registers.f.zero = result == 0;
                 self.registers.f.carry = new_carry != 0;
@@ -275,6 +305,9 @@ impl CPU {
                 // reset flags
                 self.registers.f.subtract = false;
                 self.registers.f.half_carry = false;
+                */
+
+                self.registers.f.set(Some(result == 0), Some(false), Some(false), Some(new_carry != 0));
 
                 // set the flag to the new value
                 self.set_register_from_prefix(target, result);
@@ -288,6 +321,7 @@ impl CPU {
                 // rotate the value left
                 let result = value.rotate_left(1);
 
+                /*
                 // set flags
                 self.registers.f.zero = result == 0;
                 self.registers.f.carry = new_carry != 0;
@@ -295,6 +329,9 @@ impl CPU {
                 // reset flags
                 self.registers.f.subtract = false;
                 self.registers.f.half_carry = false;
+                */
+
+                self.registers.f.set(Some(result == 0), Some(false), Some(false), Some(new_carry != 0));
 
                 // set to value rotated right
                 self.set_register_from_prefix(target, result);
@@ -305,9 +342,6 @@ impl CPU {
                 //
                 // in rust, shifting a u8 is automatically logical
                 let value = self.get_register_from_prefix(target);
-
-                // put LSB of register before shift into carry flag
-                self.registers.f.carry = (value & 0x1) != 0;
 
                 // get the MSB of value
                 let msb = (value & 0x80) >> 7;
@@ -320,26 +354,37 @@ impl CPU {
                     value >> 1
                 };
 
+                /*
+                // put LSB of register before shift into carry flag
+                self.registers.f.carry = (value & 0x1) != 0;
+
                 // set flags accordingly
                 self.registers.f.zero = result == 0;
                 self.registers.f.subtract = false;
                 self.registers.f.half_carry = false;
+                */
+
+                self.registers.f.set(Some(result == 0), Some(false), Some(false), Some((value & 0x1) != 0));
 
                 self.set_register_from_prefix(target, result);
             },
             Instruction::SLA(target) => {
                 let value = self.get_register_from_prefix(target);
 
-                // put MSB of register before shift into carry flag
-                self.registers.f.carry = (value & 0x80) >> 7 != 0;
-
                 // shift left
                 let result = value << 1;
+
+                /*
+                // put MSB of register before shift into carry flag
+                self.registers.f.carry = (value & 0x80) >> 7 != 0;
 
                 // set flags accordingly
                 self.registers.f.zero = result == 0;
                 self.registers.f.subtract = false;
                 self.registers.f.half_carry = false;
+                */
+
+                self.registers.f.set(Some(result == 0), Some(false), Some(false), Some((value & 0x80) >> 7 != 0));
 
                 self.set_register_from_prefix(target, result);
             },
@@ -348,16 +393,20 @@ impl CPU {
 
                 // get upper and lower nibbles of the value
                 let upper = (value & 0xf0) >> 4;
-                let lower = (value & 0xf);
+                let lower = value & 0xf;
 
                 // combine the lower and upper nibbles to perform the swap
                 let result = (lower << 4) | upper;
 
+                /*
                 // set registers accordingly
                 self.registers.f.zero = result == 0;
                 self.registers.f.subtract = false;
                 self.registers.f.carry = false;
                 self.registers.f.half_carry = false;
+                */
+
+                self.registers.f.set(Some(result == 0), Some(false), Some(false), Some(false));
 
                 self.set_register_from_prefix(target, result);
             }
@@ -403,63 +452,91 @@ impl CPU {
                 let result = self.registers.a.wrapping_add(1);
 
                 // note: carry flag not affected
+                /*
                 self.registers.f.zero = result == 0;
                 self.registers.f.subtract = false;
                 self.registers.f.half_carry = (self.registers.a & 0xf) + (1 & 0xf) > 0xf;
+                */
+
+                self.registers.f.set(Some(result == 0), Some(false), Some((self.registers.a & 0xf) + (1 & 0xf) > 0xf), None);
 
                 self.registers.a = result;
             },
             IncDecTarget::B => {
                 let result = self.registers.b.wrapping_add(1);
 
+                /*
                 self.registers.f.zero = result == 0;
                 self.registers.f.subtract = false;
                 self.registers.f.half_carry = (self.registers.b & 0xf) + (1 & 0xf) > 0xf;
+                */
+
+                self.registers.f.set(Some(result == 0), Some(false), Some((self.registers.b & 0xf) + (1 & 0xf) > 0xf), None);
 
                 self.registers.b = result;
             },
             IncDecTarget::C => {
                 let result = self.registers.c.wrapping_add(1);
 
+                /*
                 self.registers.f.zero = result == 0;
                 self.registers.f.subtract = false;
                 self.registers.f.half_carry = (self.registers.c & 0xf) + (1 & 0xf) > 0xf;
+                */
+
+                self.registers.f.set(Some(result == 0), Some(false), Some((self.registers.c & 0xf) + (1 & 0xf) > 0xf), None);
 
                 self.registers.c = result;
             },
             IncDecTarget::D => {
                 let result = self.registers.d.wrapping_add(1);
 
+                /*
                 self.registers.f.zero = result == 0;
                 self.registers.f.subtract = false;
                 self.registers.f.half_carry = (self.registers.d & 0xf) + (1 & 0xf) > 0xf;
+                */
+
+                self.registers.f.set(Some(result == 0), Some(false), Some((self.registers.d & 0xf) + (1 & 0xf) > 0xf), None);
 
                 self.registers.d = result;
             },
             IncDecTarget::E => {
                 let result = self.registers.e.wrapping_add(1);
 
+                /*
                 self.registers.f.zero = result == 0;
                 self.registers.f.subtract = false;
                 self.registers.f.half_carry = (self.registers.e & 0xf) + (1 & 0xf) > 0xf;
+                */
+
+                self.registers.f.set(Some(result == 0), Some(false), Some((self.registers.e & 0xf) + (1 & 0xf) > 0xf), None);
 
                 self.registers.e = result;
             },
             IncDecTarget::H => {
                 let result = self.registers.h.wrapping_add(1);
 
+                /*
                 self.registers.f.zero = result == 0;
                 self.registers.f.subtract = false;
                 self.registers.f.half_carry = (self.registers.h & 0xf) + (1 & 0xf) > 0xf;
+                */
+
+                self.registers.f.set(Some(result == 0), Some(false), Some((self.registers.h & 0xf) + (1 & 0xf) > 0xf), None);
 
                 self.registers.h = result;
             },
             IncDecTarget::L => {
                 let result = self.registers.l.wrapping_add(1);
 
+                /*
                 self.registers.f.zero = result == 0;
                 self.registers.f.subtract = false;
                 self.registers.f.half_carry = (self.registers.l & 0xf) + (1 & 0xf) > 0xf;
+                */
+
+                self.registers.f.set(Some(result == 0), Some(false), Some((self.registers.l & 0xf) + (1 & 0xf) > 0xf), None);
 
                 self.registers.l = result;
             },
@@ -467,9 +544,13 @@ impl CPU {
                 // let result = self.bus.read_byte(self.registers.get_hl()) + 1;
                 let result = self.bus.read_byte(self.registers.get_hl()).wrapping_add(1);
 
+                /*
                 self.registers.f.zero = result == 0;
                 self.registers.f.subtract = false;
                 self.registers.f.half_carry = (self.bus.read_byte(self.registers.get_hl()) & 0xf) + (1 & 0xf) > 0xf;
+                */
+
+                self.registers.f.set(Some(result == 0), Some(false), Some((self.bus.read_byte(self.registers.get_hl()) & 0xf) + (1 & 0xf) > 0xf), None);
 
                 self.bus.set_byte(self.registers.get_hl(), result);
             }
@@ -487,36 +568,52 @@ impl CPU {
                 let result = self.registers.a.wrapping_sub(1);
 
                 // note: carry flag not affected
+                /*
                 self.registers.f.zero = result == 0;
                 self.registers.f.subtract = true;
                 self.registers.f.half_carry = (self.registers.a & 0xf) < (1 & 0xf);
+                */
+
+                self.registers.f.set(Some(result == 0), Some(true), Some((self.registers.a & 0xf) < (1 & 0xf)), None);
 
                 self.registers.a = result;
             },
             IncDecTarget::B => {
                 let result = self.registers.b.wrapping_sub(1);
 
+                /*
                 self.registers.f.zero = result == 0;
                 self.registers.f.subtract = true;
                 self.registers.f.half_carry = (self.registers.b & 0xf) < (1 & 0xf);
+                */
+
+                self.registers.f.set(Some(result == 0), Some(true), Some((self.registers.b & 0xf) < (1 & 0xf)), None);
 
                 self.registers.b = result;
             },
             IncDecTarget::C => {
                 let result = self.registers.c.wrapping_sub(1);
 
+                /*
                 self.registers.f.zero = result == 0;
                 self.registers.f.subtract = true;
                 self.registers.f.half_carry = (self.registers.c & 0xf) < (1 & 0xf);
+                */
+
+                self.registers.f.set(Some(result == 0), Some(true), Some((self.registers.c & 0xf) < (1 & 0xf)), None);
 
                 self.registers.c = result;
             },
             IncDecTarget::D => {
                 let result = self.registers.d.wrapping_sub(1);
 
+                /*
                 self.registers.f.zero = result == 0;
                 self.registers.f.subtract = true;
                 self.registers.f.half_carry = (self.registers.d & 0xf) < (1 & 0xf);
+                */
+
+                self.registers.f.set(Some(result == 0), Some(true), Some((self.registers.d & 0xf) < (1 & 0xf)), None);
 
                 self.registers.d = result;
             },
@@ -524,9 +621,13 @@ impl CPU {
                 let result = self.registers.e.wrapping_sub(1);
 
                 // note: carry flag not affected
+                /*
                 self.registers.f.zero = result == 0;
                 self.registers.f.subtract = true;
                 self.registers.f.half_carry = (self.registers.e & 0xf) < (1 & 0xf);
+                */
+
+                self.registers.f.set(Some(result == 0), Some(true), Some((self.registers.e & 0xf) < (1 & 0xf)), None);
 
                 self.registers.e = result;
             },
@@ -534,9 +635,13 @@ impl CPU {
                 let result = self.registers.h.wrapping_sub(1);
 
                 // note: carry flag not affected
+                /*
                 self.registers.f.zero = result == 0;
                 self.registers.f.subtract = true;
                 self.registers.f.half_carry = (self.registers.h & 0xf) < (1 & 0xf);
+                */
+
+                self.registers.f.set(Some(result == 0), Some(true), Some((self.registers.h & 0xf) < (1 & 0xf)), None);
 
                 self.registers.h = result;
             },
@@ -544,9 +649,12 @@ impl CPU {
                 let result = self.registers.l.wrapping_sub(1);
 
                 // note: carry flag not affected
+                /*
                 self.registers.f.zero = result == 0;
                 self.registers.f.subtract = true;
                 self.registers.f.half_carry = (self.registers.l & 0xf) < (1 & 0xf);
+                */
+                self.registers.f.set(Some(result == 0), Some(true), Some((self.registers.l & 0xf) < (1 & 0xf)), None);
 
                 self.registers.l = result;
             },
@@ -554,9 +662,12 @@ impl CPU {
                 let result = self.bus.read_byte(self.registers.get_hl()).wrapping_sub(1);
 
                 // note: carry flag not affected
+                /*
                 self.registers.f.zero = result == 0;
                 self.registers.f.subtract = true;
                 self.registers.f.half_carry = (self.bus.read_byte(self.registers.get_hl()) & 0xf) < (1 & 0xf);
+                */
+                self.registers.f.set(Some(result == 0), Some(true), Some((self.bus.read_byte(self.registers.get_hl()) & 0xf) < (1 & 0xf)), None);
 
                 self.bus.set_byte(self.registers.get_hl(), result);
             }
@@ -568,6 +679,7 @@ impl CPU {
         // set a to itself anded with the value of the target register
         self.registers.a &= self.get_register_from_arith(target);
 
+        /*
         // set zero flag if the result of the and is equal to 0
         self.registers.f.zero = self.registers.a == 0;
 
@@ -579,6 +691,8 @@ impl CPU {
 
         // set half_carry flag
         self.registers.f.half_carry = true;
+        */
+        self.registers.f.set(Some(self.registers.a == 0), Some(false), Some(true), Some(false));
     }
 
     // OR instruction
@@ -586,6 +700,7 @@ impl CPU {
         // set a to itself ored with the value of the target register
         self.registers.a |= self.get_register_from_arith(target);
 
+        /*
         // set zero flag if the result of the and is equal to 0
         self.registers.f.zero = self.registers.a == 0;
 
@@ -597,6 +712,8 @@ impl CPU {
 
         // reset half_carry flag
         self.registers.f.half_carry = false;
+        */
+        self.registers.f.set(Some(self.registers.a == 0), Some(false), Some(false), Some(false));
     }
 
     // XOR instruction
@@ -604,6 +721,7 @@ impl CPU {
         // set a to itself xored with the value of the target register
         self.registers.a ^= self.get_register_from_arith(target);
 
+        /*
         // set zero flag if the result of the and is equal to 0
         self.registers.f.zero = self.registers.a == 0;
 
@@ -615,6 +733,8 @@ impl CPU {
 
         // reset half_carry flag
         self.registers.f.half_carry = false;
+        */
+        self.registers.f.set(Some(self.registers.a == 0), Some(false), Some(false), Some(false));
     }
 
     // get register value from arith target
@@ -663,6 +783,7 @@ impl CPU {
     fn add_a(&mut self, value: u8) -> u8 {
         let (result, did_overflow) = self.registers.a.overflowing_add(value);
 
+        /*
         // set zero flag if the result is equal to 0
         self.registers.f.zero = result == 0;
 
@@ -674,6 +795,8 @@ impl CPU {
 
         // set the half_carry flag if there was a carry to the upper nibble of a
         self.registers.f.half_carry = (self.registers.a & 0xf) + (value & 0xf) > 0xf;
+        */
+        self.registers.f.set(Some(result == 0), Some(false), Some((self.registers.a & 0xf) + (value & 0xf) > 0xf), Some(did_overflow));
 
         // return the result of the addition
         result
@@ -683,6 +806,7 @@ impl CPU {
     fn add_hl(&mut self, value: u16) -> u16 {
         let (result, did_overflow) = self.registers.get_hl().overflowing_add(value);
 
+        /*
         // zero flag not set
 
         // set subtract flag to false as this operation is an addition
@@ -693,6 +817,9 @@ impl CPU {
 
         // set the half_carry flag if there was a carry to the upper nibble of hl
         self.registers.f.half_carry = (self.registers.get_hl() & 0xfff) + (value & 0xfff) > 0xfff;
+        */
+
+        self.registers.f.set(None, Some(false), Some((self.registers.get_hl() & 0xfff) + (value & 0xfff) > 0xfff), Some(did_overflow));
 
         // return the result of the addition
         result
@@ -702,6 +829,7 @@ impl CPU {
     fn sub_a(&mut self, value: u8) -> u8 {
         let (result, did_underflow) = self.registers.a.overflowing_sub(value);
 
+        /*
         // set zero flag if the result is equal to 0
         self.registers.f.zero = result == 0;
 
@@ -713,6 +841,8 @@ impl CPU {
 
         // set the half_carry flag if there was a borrow from bit 4
         self.registers.f.half_carry = (self.registers.a & 0xf) < (value & 0xf);
+        */
+        self.registers.f.set(Some(result == 0), Some(true), Some((self.registers.a & 0xf) < (value & 0xf)), Some(did_underflow));
 
         // return the result of the subtraction
         result
