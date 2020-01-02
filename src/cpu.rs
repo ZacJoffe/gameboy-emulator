@@ -492,25 +492,27 @@ impl CPU {
                 };
 
                 // return 3 or the address jumped to
-                self.jump(jump_condition)
+                self.jp(jump_condition)
+            },
+            Instruction::JR(test) => {
+                let jump_condition = match test {
+                    JumpTest::NotZero => !self.registers.f.zero,
+                    JumpTest::Zero => self.registers.f.zero,
+                    JumpTest::NotCarry => !self.registers.f.carry,
+                    JumpTest::Carry => self.registers.f.carry,
+                    JumpTest::Unconditional => true
+                };
+
+                // return 3 or the address jumped to
+                self.jr(jump_condition)
+            },
+            Instruction::JPHLI => {
+                self.bus.read_byte(self.registers.get_hl()) as u16
             }
-            _ => { 0 }
+            _ => { 1 }
         }
     }
 
-    fn jump(&self, jump: bool) -> u16 {
-        if jump {
-            // little endian
-            let upper_byte = self.bus.read_byte(self.pc + 2) as u16;
-            let lower_byte = self.bus.read_byte(self.pc + 1) as u16;
-
-            // return the address
-            (upper_byte << 8) | lower_byte
-        } else {
-            // add 3
-            self.pc.wrapping_add(3)
-        }
-    }
 
     // reads the next byte in memory
     fn read_next_byte(&self) -> u8 {
@@ -835,6 +837,45 @@ impl CPU {
         */
         self.registers.f.set(Some(self.registers.a == 0), Some(false), Some(false), Some(false));
     }
+
+    // JP instruction
+    fn jp(&self, jump: bool) -> u16 {
+        if jump {
+            // little endian
+            let upper_byte = self.bus.read_byte(self.pc + 2) as u16;
+            let lower_byte = self.bus.read_byte(self.pc + 1) as u16;
+
+            // return the address
+            (upper_byte << 8) | lower_byte
+        } else {
+            // add 3
+            self.pc.wrapping_add(3)
+        }
+    }
+
+    // JR instruction
+    fn jr(&self, jump: bool) -> u16 {
+        let mut next_pc = self.pc.wrapping_add(2);
+
+        if jump {
+            // the next byte is interpreted as a signed integer
+            //
+            // if it's positive, then do a wrapping add
+            // else, wrapping sub the magnitude of the offset
+            let offset = self.bus.read_byte(self.pc + 1) as i8;
+            next_pc = if offset >= 0 {
+                next_pc.wrapping_add(offset as u16)
+            } else {
+                next_pc.wrapping_sub(offset.abs() as u16)
+            };
+
+            next_pc
+        } else {
+            // add 2
+            next_pc
+        }
+    }
+
 
     // get register value from arith target
     fn get_register_from_arith(&self, target: ArithTarget) -> u8 {

@@ -36,6 +36,8 @@ pub enum Instruction {
     SWAP(PrefixTarget),
 
     JP(JumpTest),
+    JR(JumpTest),
+    JPHLI,
 
     NOP
 }
