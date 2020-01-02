@@ -33,7 +33,9 @@ pub enum Instruction {
     RLC(PrefixTarget),
     SRA(PrefixTarget),
     SLA(PrefixTarget),
-    SWAP(PrefixTarget)
+    SWAP(PrefixTarget),
+
+    NOP
 }
 
 pub enum ArithTarget {
@@ -82,13 +84,17 @@ impl Instruction {
         }
     }
 
-    fn disassemble_prefixed(byte: u8) -> Option<Instruction> {
+    // todo when instruction enum is completely filled
+    fn disassemble_not_prefixed(byte: u8) -> Option<Instruction> {
         match byte {
+            0x00 => Some(Instruction::NOP),
 
+            _ => None
         }
     }
 
-    fn disassemble_not_prefixed(byte: u8) -> Option<Instruction> {
+    // todo: check over
+    fn disassemble_prefixed(byte: u8) -> Option<Instruction> {
         match byte {
             0x00 => Some(Instruction::RLC(PrefixTarget::B)),
             0x01 => Some(Instruction::RLC(PrefixTarget::C)),
@@ -377,7 +383,6 @@ impl Instruction {
             0xfd => Some(Instruction::SET(BitPosition::B7, PrefixTarget::L)),
             0xfe => Some(Instruction::SET(BitPosition::B7, PrefixTarget::HLI)),
             0xff => Some(Instruction::SET(BitPosition::B7, PrefixTarget::A)),
-            _ => None
         }
     }
 }

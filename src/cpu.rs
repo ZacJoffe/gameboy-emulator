@@ -410,6 +410,7 @@ impl CPU {
 
                 self.set_register_from_prefix(target, result);
             }
+            _ => {}
         }
     }
 
