@@ -76,7 +76,7 @@ impl From<BitPosition> for u8 {
 }
 
 impl Instruction {
-    fn disassemble(byte: u8, is_prefixed: bool) -> Option<Instruction> {
+    pub fn disassemble(byte: u8, is_prefixed: bool) -> Option<Instruction> {
         if is_prefixed {
             Some(Instruction::disassemble_prefixed(byte))
         } else {
