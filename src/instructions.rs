@@ -39,6 +39,8 @@ pub enum Instruction {
     JR(JumpTest),
     JPHLI,
 
+    LD(LoadType),
+
     NOP
 }
 
@@ -86,6 +88,19 @@ pub enum JumpTest {
     NotCarry,
     Carry,
     Unconditional
+}
+
+pub enum LoadByteTarget {
+    A, B, C, D, E, H, L, HLI
+}
+
+#[derive(Copy, Clone)]
+pub enum LoadByteSource {
+    A, B, C, D, E, H, L, D8, HLI
+}
+
+pub enum LoadType {
+    Byte(LoadByteTarget, LoadByteSource)
 }
 
 impl Instruction {

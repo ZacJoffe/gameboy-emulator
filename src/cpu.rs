@@ -15,7 +15,8 @@ impl CPU {
         let is_prefixed = instr_byte == 0xcb;
 
         if is_prefixed {
-            instr_byte = self.bus.read_byte(self.pc + 1);
+            // instr_byte = self.bus.read_byte(self.pc + 1);
+            instr_byte = self.read_next_byte();
         }
 
         let next_pc = if let Some(instr) = Instruction::disassemble(instr_byte, is_prefixed) {
@@ -508,6 +509,20 @@ impl CPU {
             },
             Instruction::JPHLI => {
                 self.bus.read_byte(self.registers.get_hl()) as u16
+            },
+            Instruction::LD(load_type) => {
+                match load_type {
+                    LoadType::Byte(target, source) => {
+                        // load the value form memory into the target
+                        self.set_register_from_load_byte(target, self.get_register_from_load_byte(source));
+
+                        // if the source is a d8, we need to add 2 to the pc
+                        match source {
+                            LoadByteSource::D8 => self.pc.wrapping_add(2),
+                            _ => self.pc.wrapping_add(1)
+                        }
+                    }
+                }
             }
             _ => { 1 }
         }
@@ -843,7 +858,8 @@ impl CPU {
         if jump {
             // little endian
             let upper_byte = self.bus.read_byte(self.pc + 2) as u16;
-            let lower_byte = self.bus.read_byte(self.pc + 1) as u16;
+            // let lower_byte = self.bus.read_byte(self.pc + 1) as u16;
+            let lower_byte = self.read_next_byte() as u16;
 
             // return the address
             (upper_byte << 8) | lower_byte
@@ -862,7 +878,8 @@ impl CPU {
             //
             // if it's positive, then do a wrapping add
             // else, wrapping sub the magnitude of the offset
-            let offset = self.bus.read_byte(self.pc + 1) as i8;
+            // let offset = self.bus.read_byte(self.pc + 1) as i8;
+            let offset = self.read_next_byte() as i8;
             next_pc = if offset >= 0 {
                 next_pc.wrapping_add(offset as u16)
             } else {
@@ -906,6 +923,7 @@ impl CPU {
         }
     }
 
+    // set a register from a prefix target to a value
     fn set_register_from_prefix(&mut self, target: PrefixTarget, value: u8) {
         match target {
             PrefixTarget::A => { self.registers.a = value; },
@@ -916,6 +934,35 @@ impl CPU {
             PrefixTarget::H => { self.registers.h = value; },
             PrefixTarget::L => { self.registers.l = value; },
             PrefixTarget::HLI => { self.bus.set_byte(self.registers.get_hl(), value); }
+        }
+    }
+
+    // get a register from a load byte source
+    fn get_register_from_load_byte(&self, source: LoadByteSource) -> u8 {
+        match source {
+            LoadByteSource::A => self.registers.a,
+            LoadByteSource::B => self.registers.b,
+            LoadByteSource::C => self.registers.c,
+            LoadByteSource::D => self.registers.d,
+            LoadByteSource::E => self.registers.e,
+            LoadByteSource::H => self.registers.h,
+            LoadByteSource::L => self.registers.l,
+            LoadByteSource::D8 => self.read_next_byte(),
+            LoadByteSource::HLI => self.bus.read_byte(self.registers.get_hl())
+        }
+    }
+
+    // set a register from a load byte target to a value
+    fn set_register_from_load_byte(&mut self, target: LoadByteTarget, value: u8) {
+        match target {
+            LoadByteTarget::A => self.registers.a = value,
+            LoadByteTarget::B => self.registers.b = value,
+            LoadByteTarget::C => self.registers.c = value,
+            LoadByteTarget::D => self.registers.d = value,
+            LoadByteTarget::E => self.registers.e = value,
+            LoadByteTarget::H => self.registers.h = value,
+            LoadByteTarget::L => self.registers.l = value,
+            LoadByteTarget::HLI => self.bus.set_byte(self.registers.get_hl(), value)
         }
     }
 
