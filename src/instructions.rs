@@ -35,6 +35,8 @@ pub enum Instruction {
     SLA(PrefixTarget),
     SWAP(PrefixTarget),
 
+    JP(JumpTest),
+
     NOP
 }
 
@@ -74,6 +76,14 @@ impl From<BitPosition> for u8 {
             BitPosition::B7 => 7,
         }
     }
+}
+
+pub enum JumpTest {
+    NotZero,
+    Zero,
+    NotCarry,
+    Carry,
+    Unconditional
 }
 
 impl Instruction {

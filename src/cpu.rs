@@ -481,8 +481,34 @@ impl CPU {
 
                 self.set_register_from_prefix(target, result);
                 self.pc.wrapping_add(2)
+            },
+            Instruction::JP(test) => {
+                let jump_condition = match test {
+                    JumpTest::NotZero => !self.registers.f.zero,
+                    JumpTest::Zero => self.registers.f.zero,
+                    JumpTest::NotCarry => !self.registers.f.carry,
+                    JumpTest::Carry => self.registers.f.carry,
+                    JumpTest::Unconditional => true
+                };
+
+                // return 3 or the address jumped to
+                self.jump(jump_condition)
             }
-            _ => { 1 }
+            _ => { 0 }
+        }
+    }
+
+    fn jump(&self, jump: bool) -> u16 {
+        if jump {
+            // little endian
+            let upper_byte = self.bus.read_byte(self.pc + 2) as u16;
+            let lower_byte = self.bus.read_byte(self.pc + 1) as u16;
+
+            // return the address
+            (upper_byte << 8) | lower_byte
+        } else {
+            // add 3
+            self.pc.wrapping_add(3)
         }
     }
 
