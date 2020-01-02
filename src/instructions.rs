@@ -38,6 +38,7 @@ pub enum Instruction {
     NOP
 }
 
+#[derive(Copy, Clone)]
 pub enum ArithTarget {
     A, B, C, D, E, H, L, D8, HLI
 }

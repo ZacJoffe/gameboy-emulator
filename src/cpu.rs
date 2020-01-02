@@ -31,13 +31,21 @@ impl CPU {
         match instr {
             Instruction::ADD(target) => {
                 self.add(target);
-                self.pc.wrapping_add(1)
+
+                match target {
+                    ArithTarget::D8 => { self.pc.wrapping_add(2) },
+                    _ => { self.pc.wrapping_add(1) }
+                }
             },
             Instruction::ADC(target) => {
                 // do an ADD, then add the carry
                 self.add(target);
                 self.add_a(self.registers.f.carry as u8);
-                self.pc.wrapping_add(1)
+
+                match target {
+                    ArithTarget::D8 => { self.pc.wrapping_add(2) },
+                    _ => { self.pc.wrapping_add(1) }
+                }
             },
             Instruction::ADDHL(target) => {
                 let value = match target {
@@ -52,29 +60,47 @@ impl CPU {
             },
             Instruction::SUB(target) => {
                 self.sub(target);
-                self.pc.wrapping_add(1)
+                match target {
+                    ArithTarget::D8 => { self.pc.wrapping_add(2) },
+                    _ => { self.pc.wrapping_add(1) }
+                }
             },
             Instruction::SBC(target) => {
                 // do a SUB, then add the carry
                 self.sub(target);
                 self.sub_a(self.registers.f.carry as u8);
-                self.pc.wrapping_add(1)
+                match target {
+                    ArithTarget::D8 => { self.pc.wrapping_add(2) },
+                    _ => { self.pc.wrapping_add(1) }
+                }
             },
             Instruction::AND(target) => {
                 self.and(target);
-                self.pc.wrapping_add(1)
+                match target {
+                    ArithTarget::D8 => { self.pc.wrapping_add(2) },
+                    _ => { self.pc.wrapping_add(1) }
+                }
             },
             Instruction::OR(target) => {
                 self.or(target);
-                self.pc.wrapping_add(1)
+                match target {
+                    ArithTarget::D8 => { self.pc.wrapping_add(2) },
+                    _ => { self.pc.wrapping_add(1) }
+                }
             },
             Instruction::XOR(target) => {
                 self.xor(target);
-                self.pc.wrapping_add(1)
+                match target {
+                    ArithTarget::D8 => { self.pc.wrapping_add(2) },
+                    _ => { self.pc.wrapping_add(1) }
+                }
             },
             Instruction::CP(target) => {
                 self.cp(target);
-                self.pc.wrapping_add(1)
+                match target {
+                    ArithTarget::D8 => { self.pc.wrapping_add(2) },
+                    _ => { self.pc.wrapping_add(1) }
+                }
             },
             Instruction::INC(target) => {
                 self.inc(target);
@@ -220,7 +246,7 @@ impl CPU {
                 */
 
                 self.registers.f.set(Some(bit == 0), Some(false), Some(true), None);
-                self.pc.wrapping_add(1)
+                self.pc.wrapping_add(2)
             },
             Instruction::SET(pos, target) => {
                 // shift 0x1 to the required bit position for the or operation
@@ -236,7 +262,7 @@ impl CPU {
                     PrefixTarget::L => { self.registers.l |= bit_set },
                     PrefixTarget::HLI => { self.bus.set_byte(self.registers.get_hl(), self.bus.read_byte(self.registers.get_hl()) | bit_set) }
                 }
-                self.pc.wrapping_add(1)
+                self.pc.wrapping_add(2)
             },
             Instruction::RES(pos, target) => {
                 // rotate 0xfe
@@ -253,7 +279,7 @@ impl CPU {
                     PrefixTarget::L => { self.registers.l &= bit_mask },
                     PrefixTarget::HLI => { self.bus.set_byte(self.registers.get_hl(), self.bus.read_byte(self.registers.get_hl()) & bit_mask) }
                 }
-                self.pc.wrapping_add(1)
+                self.pc.wrapping_add(2)
             },
             Instruction::SRL(target) => {
                 // note that this opcode does a logical shift right,
@@ -279,7 +305,7 @@ impl CPU {
                 self.registers.f.set(Some(result == 0), Some(false), Some(false), Some((value & 0x1) != 0));
 
                 self.set_register_from_prefix(target, value);
-                self.pc.wrapping_add(1)
+                self.pc.wrapping_add(2)
             },
             Instruction::RR(target) => {
                 let value = self.get_register_from_prefix(target);
@@ -303,7 +329,7 @@ impl CPU {
                 self.registers.f.set(Some(result == 0), Some(false), Some(false), Some(new_carry != 0));
 
                 self.set_register_from_prefix(target, value);
-                self.pc.wrapping_add(1)
+                self.pc.wrapping_add(2)
             },
             Instruction::RL(target) => {
                 let value = self.get_register_from_prefix(target);
@@ -327,7 +353,7 @@ impl CPU {
                 self.registers.f.set(Some(result == 0), Some(false), Some(false), Some(new_carry != 0));
 
                 self.set_register_from_prefix(target, value);
-                self.pc.wrapping_add(1)
+                self.pc.wrapping_add(2)
             },
             Instruction::RRC(target) => {
                 let value = self.get_register_from_prefix(target);
@@ -352,7 +378,7 @@ impl CPU {
 
                 // set the flag to the new value
                 self.set_register_from_prefix(target, result);
-                self.pc.wrapping_add(1)
+                self.pc.wrapping_add(2)
             },
             Instruction::RLC(target) => {
                 let value = self.get_register_from_prefix(target);
@@ -377,7 +403,7 @@ impl CPU {
 
                 // set to value rotated right
                 self.set_register_from_prefix(target, result);
-                self.pc.wrapping_add(1)
+                self.pc.wrapping_add(2)
             },
             Instruction::SRA(target) => {
                 // note this instruction needs to do an arithmetic shift
@@ -410,7 +436,7 @@ impl CPU {
                 self.registers.f.set(Some(result == 0), Some(false), Some(false), Some((value & 0x1) != 0));
 
                 self.set_register_from_prefix(target, result);
-                self.pc.wrapping_add(1)
+                self.pc.wrapping_add(2)
             },
             Instruction::SLA(target) => {
                 let value = self.get_register_from_prefix(target);
@@ -431,7 +457,7 @@ impl CPU {
                 self.registers.f.set(Some(result == 0), Some(false), Some(false), Some((value & 0x80) >> 7 != 0));
 
                 self.set_register_from_prefix(target, result);
-                self.pc.wrapping_add(1)
+                self.pc.wrapping_add(2)
             },
             Instruction::SWAP(target) => {
                 let value = self.get_register_from_prefix(target);
@@ -454,9 +480,9 @@ impl CPU {
                 self.registers.f.set(Some(result == 0), Some(false), Some(false), Some(false));
 
                 self.set_register_from_prefix(target, result);
-                self.pc.wrapping_add(1)
+                self.pc.wrapping_add(2)
             }
-            _ => { 0 }
+            _ => { 1 }
         }
     }
 
