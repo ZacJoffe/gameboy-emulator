@@ -521,6 +521,85 @@ impl CPU {
                             LoadByteSource::D8 => self.pc.wrapping_add(2),
                             _ => self.pc.wrapping_add(1)
                         }
+                    },
+                    LoadType::Word(target) => {
+                        /*
+                        // little endian
+                        let upper_byte = self.bus.read_byte(self.pc + 2) as u16;
+                        let lower_byte = self.read_next_byte() as u16;
+                        let value = (upper_byte << 8) | lower_byte;
+                        */
+                        let value = self.read_next_word();
+
+                        match target {
+                            LoadWordTarget::BC => self.registers.set_bc(value),
+                            LoadWordTarget::DE => self.registers.set_de(value),
+                            LoadWordTarget::HL => self.registers.set_hl(value),
+                            LoadWordTarget::SP => self.sp = value
+                        };
+
+                        // add 3 to the pc
+                        self.pc.wrapping_add(3)
+                    },
+                    LoadType::AFromIndirect(target) => {
+                        self.registers.a = match target {
+                            LoadIndirectTarget::BCI => self.bus.read_byte(self.registers.get_bc()),
+                            LoadIndirectTarget::DEI => self.bus.read_byte(self.registers.get_de()),
+                            LoadIndirectTarget::HLIPLUS => {
+                                // increment hl, then get the byte at address hl
+                                self.registers.set_hl(self.registers.get_hl().wrapping_add(1));
+                                self.bus.read_byte(self.registers.get_hl())
+                            },
+                            LoadIndirectTarget::HLIMINUS => {
+                                // decrement hl, then get the byte at address hl
+                                self.registers.set_hl(self.registers.get_hl().wrapping_sub(1));
+                                self.bus.read_byte(self.registers.get_hl())
+                            },
+                            LoadIndirectTarget::WORDI => self.bus.read_byte(self.read_next_word()),
+                            LoadIndirectTarget::CI => self.bus.read_byte(0xff00 + (self.registers.c as u16))
+                        };
+
+                        // only the (word) load instruction adds 3 to the pc (to skip the word)
+                        // the rest will just go to the next byte
+                        match target {
+                            LoadIndirectTarget::WORDI => self.pc.wrapping_add(3),
+                            _ => self.pc.wrapping_add(1)
+                        }
+                    },
+                    LoadType::IndirectFromA(target) => {
+                        match target {
+                            LoadIndirectTarget::BCI => self.bus.set_byte(self.registers.get_bc(), self.registers.a),
+                            LoadIndirectTarget::DEI => self.bus.set_byte(self.registers.get_de(), self.registers.a),
+                            LoadIndirectTarget::HLIPLUS => {
+                                // increment hl, then get the byte at address hl
+                                self.registers.set_hl(self.registers.get_hl().wrapping_add(1));
+                                self.bus.set_byte(self.registers.get_hl(), self.registers.a);
+                            },
+                            LoadIndirectTarget::HLIMINUS => {
+                                // decrement hl, then get the byte at address hl
+                                self.registers.set_hl(self.registers.get_hl().wrapping_sub(1));
+                                self.bus.set_byte(self.registers.get_hl(), self.registers.a);
+                            },
+                            LoadIndirectTarget::WORDI => self.bus.set_byte(self.read_next_word(), self.registers.a),
+                            LoadIndirectTarget::CI => self.bus.set_byte(0xff00 + (self.registers.c as u16), self.registers.a)
+                        };
+
+                        // only the (word) load instruction adds 3 to the pc (to skip the word)
+                        // the rest will just go to the next byte
+                        match target {
+                            LoadIndirectTarget::WORDI => self.pc.wrapping_add(3),
+                            _ => self.pc.wrapping_add(1)
+                        }
+                    },
+                    LoadType::AFromA8 => {
+                        // set register a to a value located at in the last byte of memory
+                        self.registers.a = self.bus.read_byte(0xff00 + (self.read_next_byte() as u16));
+                        self.pc.wrapping_add(2)
+                    },
+                    LoadType::A8FromA => {
+                        // store the value of register a into somewhere in the last byte of memory
+                        self.bus.set_byte(0xff00 + (self.read_next_byte() as u16), self.registers.a);
+                        self.pc.wrapping_add(2)
                     }
                 }
             }
@@ -532,6 +611,19 @@ impl CPU {
     // reads the next byte in memory
     fn read_next_byte(&self) -> u8 {
         self.bus.read_byte(self.pc + 1)
+    }
+
+    // reads the next word (16 bit number) in memory
+    fn read_next_word(&self) -> u16 {
+        // the gameboy's cpu is little endian
+        // thus, the byte order for a word is stored in memory from least significant to most significant byte
+        //
+        // i.e. next_word = memory[pc + 2]memory[pc + 1]
+        let lower_byte = self.read_next_byte() as u16;
+        let upper_byte = self.bus.read_byte(self.pc + 2) as u16;
+
+        // return the formed word
+        (upper_byte << 8) | lower_byte
     }
 
     // ADD instruction
@@ -856,13 +948,16 @@ impl CPU {
     // JP instruction
     fn jp(&self, jump: bool) -> u16 {
         if jump {
+            /*
             // little endian
             let upper_byte = self.bus.read_byte(self.pc + 2) as u16;
             // let lower_byte = self.bus.read_byte(self.pc + 1) as u16;
             let lower_byte = self.read_next_byte() as u16;
 
-            // return the address
             (upper_byte << 8) | lower_byte
+            */
+            // return the next word in memory as it's the new pc's address
+            self.read_next_word()
         } else {
             // add 3
             self.pc.wrapping_add(3)

@@ -99,8 +99,22 @@ pub enum LoadByteSource {
     A, B, C, D, E, H, L, D8, HLI
 }
 
+pub enum LoadWordTarget {
+    BC, DE, HL, SP
+}
+
+pub enum LoadIndirectTarget {
+    // note that CI is more like (0xff00 + C)
+    BCI, DEI, HLIPLUS, HLIMINUS, WORDI, CI
+}
+
 pub enum LoadType {
-    Byte(LoadByteTarget, LoadByteSource)
+    Byte(LoadByteTarget, LoadByteSource),
+    Word(LoadWordTarget),
+    AFromIndirect(LoadIndirectTarget),
+    IndirectFromA(LoadIndirectTarget),
+    AFromA8,
+    A8FromA
 }
 
 impl Instruction {
