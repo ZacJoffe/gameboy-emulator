@@ -602,7 +602,52 @@ impl CPU {
                         self.pc.wrapping_add(2)
                     }
                 }
-            }
+            },
+            Instruction::PUSH(target) => {
+                let value = match target {
+                    StackTarget::AF => self.registers.get_af(),
+                    StackTarget::BC => self.registers.get_bc(),
+                    StackTarget::DE => self.registers.get_de(),
+                    StackTarget::HL => self.registers.get_hl()
+                };
+
+                // push the value onto the stack (i.e. push word)
+                //
+                // the stack is full descending, so it grows "down" in memory
+                // thus, we decrease the stack pointer when we push
+                //
+                // also, store using little endian
+                self.sp = self.sp.wrapping_sub(1);
+                self.bus.set_byte(self.sp, ((value & 0xff00) >> 8) as u8);
+                self.sp = self.sp.wrapping_sub(1);
+                self.bus.set_byte(self.sp, (value & 0x00ff) as u8);
+
+                self.pc.wrapping_add(1)
+            },
+            Instruction::POP(target) => {
+                let result = {
+                    // pop word from stack
+                    //
+                    // the stack is full descending, so it grows "down" in memory
+                    // thus, we increase the stack pointer when we pop
+                    //
+                    // we account for endianness when we form the value
+                    let lower_byte = self.bus.read_byte(self.sp) as u16;
+                    self.sp = self.sp.wrapping_add(1);
+                    let upper_byte = self.bus.read_byte(self.sp) as u16;
+                    self.sp = self.sp.wrapping_add(1);
+
+                    (upper_byte << 8) | lower_byte
+                };
+
+                // set the registers to the value
+                match target {
+                    StackTarget::AF => self.registers.set_af(result),
+                    StackTarget::BC => self.registers.set_bc(result),
+                    StackTarget::DE => self.registers.set_de(result),
+                    StackTarget::HL => self.registers.set_hl(result)
+                }
+            },
             _ => { 1 }
         }
     }

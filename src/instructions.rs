@@ -41,6 +41,9 @@ pub enum Instruction {
 
     LD(LoadType),
 
+    PUSH(StackTarget),
+    POP(StackTarget),
+
     NOP
 }
 
@@ -115,6 +118,10 @@ pub enum LoadType {
     IndirectFromA(LoadIndirectTarget),
     AFromA8,
     A8FromA
+}
+
+pub enum StackTarget {
+    AF, BC, DE, HL
 }
 
 impl Instruction {
