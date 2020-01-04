@@ -44,7 +44,15 @@ pub enum Instruction {
     PUSH(StackTarget),
     POP(StackTarget),
 
-    NOP
+    CALL(JumpTest),
+    RET(JumpTest),
+    RST(RstTarget),
+    RETI,
+
+    NOP,
+    HALT,
+    DI,
+    EI
 }
 
 #[derive(Copy, Clone)]
@@ -122,6 +130,10 @@ pub enum LoadType {
 
 pub enum StackTarget {
     AF, BC, DE, HL
+}
+
+pub enum RstTarget {
+    X00, X08, X10, X18, X20, X28, X30, X38
 }
 
 impl Instruction {

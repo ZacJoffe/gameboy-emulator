@@ -6,7 +6,9 @@ struct CPU {
     pc: u16,
     sp: u16,
     registers: Registers,
-    bus: MemoryBus
+    bus: MemoryBus,
+    interrupts: bool,
+    is_halted: bool,
 }
 
 impl CPU {
@@ -611,34 +613,19 @@ impl CPU {
                     StackTarget::HL => self.registers.get_hl()
                 };
 
-                // push the value onto the stack (i.e. push word)
-                //
-                // the stack is full descending, so it grows "down" in memory
-                // thus, we decrease the stack pointer when we push
-                //
-                // also, store using little endian
+                /*
                 self.sp = self.sp.wrapping_sub(1);
                 self.bus.set_byte(self.sp, ((value & 0xff00) >> 8) as u8);
                 self.sp = self.sp.wrapping_sub(1);
                 self.bus.set_byte(self.sp, (value & 0x00ff) as u8);
+                */
+                // push value onto stack
+                self.push(value);
 
                 self.pc.wrapping_add(1)
             },
             Instruction::POP(target) => {
-                let result = {
-                    // pop word from stack
-                    //
-                    // the stack is full descending, so it grows "down" in memory
-                    // thus, we increase the stack pointer when we pop
-                    //
-                    // we account for endianness when we form the value
-                    let lower_byte = self.bus.read_byte(self.sp) as u16;
-                    self.sp = self.sp.wrapping_add(1);
-                    let upper_byte = self.bus.read_byte(self.sp) as u16;
-                    self.sp = self.sp.wrapping_add(1);
-
-                    (upper_byte << 8) | lower_byte
-                };
+                let result = self.pop();
 
                 // set the registers to the value
                 match target {
@@ -646,9 +633,64 @@ impl CPU {
                     StackTarget::BC => self.registers.set_bc(result),
                     StackTarget::DE => self.registers.set_de(result),
                     StackTarget::HL => self.registers.set_hl(result)
+                };
+
+                self.pc.wrapping_add(1)
+            },
+            Instruction::CALL(test) => {
+                let jump_condition = match test {
+                    JumpTest::NotZero => !self.registers.f.zero,
+                    JumpTest::Zero => self.registers.f.zero,
+                    JumpTest::NotCarry => !self.registers.f.carry,
+                    JumpTest::Carry => self.registers.f.carry,
+                    JumpTest::Unconditional => true
+                };
+
+                self.call(jump_condition)
+            },
+            Instruction::RET(test) => {
+                 let jump_condition = match test {
+                    JumpTest::NotZero => !self.registers.f.zero,
+                    JumpTest::Zero => self.registers.f.zero,
+                    JumpTest::NotCarry => !self.registers.f.carry,
+                    JumpTest::Carry => self.registers.f.carry,
+                    JumpTest::Unconditional => true
+                };
+
+                self.ret(jump_condition)
+            },
+            Instruction::RST(target) => {
+                self.push(self.pc.wrapping_add(1));
+
+                // return one of these addresses
+                match target {
+                    RstTarget::X00 => 0x00,
+                    RstTarget::X08 => 0x08,
+                    RstTarget::X10 => 0x10,
+                    RstTarget::X18 => 0x18,
+                    RstTarget::X20 => 0x20,
+                    RstTarget::X28 => 0x28,
+                    RstTarget::X30 => 0x30,
+                    RstTarget::X38 => 0x38
                 }
             },
-            _ => { 1 }
+            Instruction::RETI => {
+                self.interrupts = true;
+                self.pop()
+            },
+            Instruction::NOP => 1,
+            Instruction::HALT => {
+                self.is_halted = true;
+                self.pc.wrapping_add(1)
+            },
+            Instruction::DI => {
+                self.interrupts = false;
+                self.pc.wrapping_add(1)
+            }
+            Instruction::EI => {
+                self.interrupts = true;
+                self.pc.wrapping_add(1)
+            }
         }
     }
 
@@ -1033,6 +1075,32 @@ impl CPU {
         }
     }
 
+    // CALL instruction
+    fn call(&mut self, jump: bool) -> u16 {
+        let next_pc = self.pc.wrapping_add(3);
+
+        if jump {
+            // push the address of the next instruction (i.e. the next pc value)
+            // onto the stack, so that we can pop into the pc when RET is called
+            self.push(next_pc);
+
+            // the next byte of memory is the address of the start of the subroutine,
+            // so return that
+            self.read_next_word()
+        } else {
+            // return the next_pc
+            next_pc
+        }
+    }
+
+    // RET instruction
+    fn ret(&mut self, jump: bool) -> u16 {
+        if jump {
+            self.pop()
+        } else {
+            self.pc.wrapping_add(1)
+        }
+    }
 
     // get register value from arith target
     fn get_register_from_arith(&self, target: ArithTarget) -> u8 {
@@ -1173,5 +1241,33 @@ impl CPU {
 
         // return the result of the subtraction
         result
+    }
+
+    // push the value onto the stack (i.e. push word)
+    //
+    // the stack is full descending, so it grows "down" in memory
+    // thus, we decrease the stack pointer when we push
+    //
+    // also, store using little endian
+    fn push(&mut self, value: u16) {
+        self.sp = self.sp.wrapping_sub(1);
+        self.bus.set_byte(self.sp, ((value & 0xff00) >> 8) as u8);
+        self.sp = self.sp.wrapping_sub(1);
+        self.bus.set_byte(self.sp, (value & 0x00ff) as u8);
+    }
+
+    // pop word from stack
+    //
+    // the stack is full descending, so it grows "down" in memory
+    // thus, we increase the stack pointer when we pop
+    //
+    // we account for endianness when we form the value
+    fn pop(&mut self) -> u16 {
+        let lower_byte = self.bus.read_byte(self.sp) as u16;
+        self.sp = self.sp.wrapping_add(1);
+        let upper_byte = self.bus.read_byte(self.sp) as u16;
+        self.sp = self.sp.wrapping_add(1);
+
+        (upper_byte << 8) | lower_byte
     }
 }
