@@ -1,11 +1,11 @@
 pub struct MemoryBus {
-    memory: [u8; 0xffff]
+    memory: [u8; 0xffff],
 }
 
 impl MemoryBus {
     pub fn new() -> MemoryBus {
         MemoryBus {
-            memory: [0; 0xffff]
+            memory: [0; 0xffff],
         }
     }
 

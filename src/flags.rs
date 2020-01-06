@@ -4,7 +4,7 @@ pub struct Flags {
     pub zero: bool,
     pub subtract: bool,
     pub half_carry: bool,
-    pub carry: bool
+    pub carry: bool,
 }
 
 impl Flags {
@@ -13,12 +13,18 @@ impl Flags {
             zero: false,
             subtract: false,
             half_carry: false,
-            carry: false
+            carry: false,
         }
     }
 
     // set all the flags at once
-    pub fn set(&mut self, zero: Option<bool>, subtract: Option<bool>, half_carry: Option<bool>, carry: Option<bool>) {
+    pub fn set(
+        &mut self,
+        zero: Option<bool>,
+        subtract: Option<bool>,
+        half_carry: Option<bool>,
+        carry: Option<bool>,
+    ) {
         match zero {
             Some(z) => self.zero = z,
             None => {}
@@ -63,7 +69,6 @@ impl From<Flags> for u8 {
     }
 }
 
-
 impl From<u8> for Flags {
     fn from(byte: u8) -> Self {
         let zero = ((byte >> 7) & 0b1) != 0;
@@ -75,7 +80,7 @@ impl From<u8> for Flags {
             zero,
             subtract,
             half_carry,
-            carry
+            carry,
         }
     }
 }
