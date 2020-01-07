@@ -65,6 +65,13 @@ impl CPU {
                 self.registers.set_hl(result);
                 self.pc.wrapping_add(1)
             }
+            Instruction::ADDSP => {
+                let value = ((self.read_next_byte() as i8) as i16) as u16;
+                let result = self.sp.wrapping_add(value);
+
+                self.registers.f.set(Some(false), Some(false), Some((self.sp * 0xf) + (value & 0xf) > 0xf), Some((self.sp & 0xff) + (value & 0xff) > 0xff));
+                self.pc.wrapping_add(2)
+            }
             Instruction::SUB(target) => {
                 self.sub(target);
                 match target {
@@ -694,6 +701,23 @@ impl CPU {
                             .set_byte(0xff00 + (self.read_next_byte() as u16), self.registers.a);
                         self.pc.wrapping_add(2)
                     }
+                    LoadType::HLFromSP => {
+                        let value = ((self.read_next_byte() as i8) as i16) as u16;
+                        let result = self.sp.wrapping_add(value);
+
+                        self.registers.f.set(Some(false), Some(false), Some((self.sp * 0xf) + (value & 0xf) > 0xf), Some((self.sp & 0xff) + (value & 0xff) > 0xff));
+                        self.registers.set_hl(result);
+                        self.pc.wrapping_add(2)
+                    }
+                    LoadType::SPFromHL => {
+                        self.sp = self.registers.get_hl();
+                        self.pc.wrapping_add(1)
+                    }
+                    LoadType::IndirectFromSP => {
+                        self.bus.set_byte(self.read_next_word(), (self.sp & 0xff) as u8);
+                        self.bus.set_byte(self.read_next_word() + 1, ((self.sp & 0xff00) >> 8) as u8);
+                        self.pc.wrapping_add(3)
+                    }
                 }
             }
             Instruction::PUSH(target) => {
@@ -773,6 +797,39 @@ impl CPU {
             Instruction::HALT => {
                 self.is_halted = true;
                 self.pc.wrapping_add(1)
+            }
+            Instruction::DAA => {
+                let value = self.registers.a;
+                let mut carry = false;
+
+                let result = if !self.registers.f.subtract {
+                    let mut result = value;
+                    if self.registers.f.carry || value > 0x99 {
+                        carry = true;
+                        result = result.wrapping_add(0x60);
+                    }
+
+                    if self.registers.f.half_carry || value & 0xf > 0x9 {
+                        result = result.wrapping_add(0x6);
+                    }
+
+                    result
+                } else if self.registers.f.carry {
+                    carry = true;
+                    if self.registers.f.half_carry {
+                        value.wrapping_add(0x9a)
+                    } else {
+                        value.wrapping_add(0xa0)
+                    }
+                } else {
+                    value
+                };
+
+                self.registers.f.set(Some(result == 0), None, Some(false), carry: Option<bool>);
+                self.pc.wrapping_add(1)
+            }
+            Instruction::STOP => {
+                panic!("STOP instruction!")
             }
             Instruction::DI => {
                 self.interrupts = false;
