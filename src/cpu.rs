@@ -825,7 +825,7 @@ impl CPU {
                     value
                 };
 
-                self.registers.f.set(Some(result == 0), None, Some(false), carry: Option<bool>);
+                self.registers.f.set(Some(result == 0), None, Some(false), Some(carry));
                 self.pc.wrapping_add(1)
             }
             Instruction::STOP => {
