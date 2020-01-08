@@ -2,7 +2,7 @@ use crate::instructions::*;
 use crate::memory_bus::MemoryBus;
 use crate::registers::Registers;
 
-struct CPU {
+pub struct CPU {
     pc: u16,
     sp: u16,
     registers: Registers,
@@ -12,6 +12,17 @@ struct CPU {
 }
 
 impl CPU {
+    pub fn new() -> CPU {
+        CPU {
+            pc: 0,
+            sp: 0,
+            registers: Registers::new(),
+            bus: MemoryBus::new(),
+            interrupts: true,
+            is_halted: false
+        }
+    }
+
     fn fetch_execute(&mut self) {
         let mut instr_byte = self.bus.read_byte(self.pc);
         let is_prefixed = instr_byte == 0xcb;
