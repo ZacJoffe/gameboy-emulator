@@ -32,6 +32,9 @@ fn main() -> io::Result<()> {
     let mut game_buffer = Vec::new();
     game.read_to_end(&mut game_buffer)?;
 
+    if bios_buffer.len() != 256 {
+        panic!("BIOS is the wrong size!");
+    }
 
     println!("Hello, world!");
 
