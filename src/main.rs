@@ -8,11 +8,12 @@ mod flags;
 mod instructions;
 mod memory_bus;
 mod registers;
+mod memory_map;
+mod gpu;
 
 use cpu::CPU;
 
 fn main() -> io::Result<()> {
-    let mut cpu = CPU::new();
     let args: Vec<String> = env::args().collect();
 
     if args.len() != 3 {
@@ -35,6 +36,9 @@ fn main() -> io::Result<()> {
     if bios_buffer.len() != 256 {
         panic!("BIOS is the wrong size!");
     }
+
+
+    let mut cpu = CPU::new(bios_buffer, game_buffer);
 
     println!("Hello, world!");
 

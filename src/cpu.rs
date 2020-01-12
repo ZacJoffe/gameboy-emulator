@@ -12,12 +12,12 @@ pub struct CPU {
 }
 
 impl CPU {
-    pub fn new() -> CPU {
+    pub fn new(rom: Vec<u8>, game: Vec<u8>) -> CPU {
         CPU {
             pc: 0,
             sp: 0,
             registers: Registers::new(),
-            bus: MemoryBus::new(),
+            bus: MemoryBus::new(rom, game),
             interrupts: true,
             is_halted: false
         }
