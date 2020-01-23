@@ -132,6 +132,7 @@ impl From<BitPosition> for u8 {
     }
 }
 
+#[derive(PartialEq)]
 pub enum JumpTest {
     NotZero,
     Zero,

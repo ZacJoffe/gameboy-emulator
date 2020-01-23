@@ -32,7 +32,7 @@ impl CPU {
             instr_byte = self.read_next_byte();
         }
 
-        let next_pc = if let Some(instr) = Instruction::disassemble(instr_byte, is_prefixed) {
+        let (next_pc, _cycles) = if let Some(instr) = Instruction::disassemble(instr_byte, is_prefixed) {
             self.execute(instr)
         } else {
             panic!(
